@@ -1,0 +1,5 @@
+[33m28370f2[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Fix camera controls: Implement proper Euler angles for smooth camera movement and correct rotation axes
+[33md93836c[m Remove PointerLock controls and implement regular mouse movement
+[33m6662c46[m Update configuration files and fix start command for Render deployment
+[33m36551e6[m Fix start command in render.yaml to use server.js directly
+[33meb2ed89[m Update server.js with better logging and error handling

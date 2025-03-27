@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Art Gallery</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA/4QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAERERERERERERAAAAAAAAERAQAAAAAAEBERAAAAAAABEREAAAAAAAEREAAAAAAAARERAAAAAAAAEREAAAAAAAABEREAAAAAAAEREAAAAAAAABEREAAAAAAAEREAAAAAAAABERAAAAAAAAEREAAAAAAAABEREAAAAAAAAAAAAAAAARERERERERERH//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//w==">
+    <style>
+        body {
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            touch-action: none;  /* Prevent default touch actions */
+        }
+
+        #scene-container { 
+            position: absolute;
+            width: 100%; 
+            height: 100%; 
+            background: linear-gradient(to bottom, #87CEEB, #1E90FF);
+        }
+
+        #controls-info {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #ffffff;
+            padding: 20px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            line-height: 1.6;
+            text-align: center;
+            pointer-events: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            white-space: pre-line;
+            transition: opacity 0.3s ease;
+        }
+
+        #artwork-info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            transform: none;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #ffffff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+            max-width: 300px;
+            text-align: left;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            transition: opacity 0.3s ease;
+            z-index: 100;
+        }
+
+        #artwork-info h2 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            color: #ffffff;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        #artwork-info p {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .train-prompt {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .train-prompt.visible {
+            opacity: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .fade-out {
+            animation: fadeOut 0.5s ease forwards;
+        }
+
+        #welcome-popup {
+            position: fixed;
+            bottom: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            padding: 2.5rem 3rem;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 1000;
+            font-size: 1.2rem;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            letter-spacing: 0.5px;
+            line-height: 1.6;
+            opacity: 1;
+            transition: all 0.3s ease-out;
+        }
+
+        .welcome-title {
+            font-size: 1.8rem;
+            font-weight: 300;
+            margin: 0;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .artist-credit {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin: 0.5rem 0;
+        }
+
+        .copyright {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .welcome-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .nodeco {
+            color: white;
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        .nodeco:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0;
+                transform: translate(-50%, 20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+
+        /* Mobile Controls */
+        #joystick {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            #joystick {
+                display: block;
+            }
+            
+            #controls-info {
+                display: none;  /* Hide desktop controls info on mobile */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="scene-container"></div>
+    <div id="controls-info">Move mouse to look around
+Use WASD keys to move
+Press E near train to board/exit</div>
+    <div id="artwork-info"></div>
+    <div id="welcome-popup">
+        <h1 class="welcome-title">Entropy Emergence through Repetition</h1>
+        <div class="artist-credit">
+            Pen and Pencil Doodle Art Exhibition by 
+            <a href='https://www.youtube.com/@tortorken' class="nodeco">imtortorken</a>
+            <span class="copyright">© 2025</span>
+        </div>
+        <div class="welcome-links">
+            <a href='https://buymeacoffee.com/beatsaway' class="nodeco">☕ Support this artist</a>
+        </div>
+    </div>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "./three/three.module.min.js",
+                "three/addons/": "./three/examples/jsm/"
+            }
+        }
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+    
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GalleryControls } from './js/controls.js';
+        import { artworkDescriptions } from './js/artworkDescriptions.js';
+        
+        // Add error handling for module loading
+        window.addEventListener('error', (event) => {
+            console.error('Error loading module:', event.message);
+            document.getElementById('scene-container').innerHTML = `
+                <div style="color: white; padding: 20px; text-align: center;">
+                    <h2>Error Loading Gallery</h2>
+                    <p>Please check the console for details.</p>
+                </div>
+            `;
+        });
+
+        // Add error handling for scene initialization
+        try {
+            // Scene setup
+            const scene = new THREE.Scene();
+            scene.userData.galleryWidth = 20 * 5;  // Scaled up 5x
+            scene.userData.galleryLength = 100 * 5;  // Scaled up 5x
+            scene.userData.galleryHeight = 8 * 5;  // Scaled up 5x
+            const wallThickness = 0.2 * 5;
+            const corridorWidth = 6 * 5;
+            
+            // Scene setup
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio > 1 ? 2 : 1);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFShadowMap;
+            document.getElementById('scene-container').appendChild(renderer.domElement);
+            
+            // Collision detection boundaries
+            const collisionWalls = [];
+            
+            function setupCollisions() {
+                // Create invisible collision walls (slightly inside the visible walls)
+                const offsetFromWall = 0.5;  // Keep player collision radius the same
+                const doorZone = 10;  // Same as teleportation zone
+                
+                // Left wall collision
+                collisionWalls.push({
+                    min: new THREE.Vector3(-scene.userData.galleryWidth / 2 + offsetFromWall, 0, -scene.userData.galleryLength / 2),
+                    max: new THREE.Vector3(-scene.userData.galleryWidth / 2 + offsetFromWall, scene.userData.galleryHeight, scene.userData.galleryLength / 2)
+                });
+                
+                // Right wall collision
+                collisionWalls.push({
+                    min: new THREE.Vector3(scene.userData.galleryWidth / 2 - offsetFromWall, 0, -scene.userData.galleryLength / 2),
+                    max: new THREE.Vector3(scene.userData.galleryWidth / 2 - offsetFromWall, scene.userData.galleryHeight, scene.userData.galleryLength / 2)
+                });
+                
+                // Back wall collision (solid)
+                collisionWalls.push({
+                    min: new THREE.Vector3(-scene.userData.galleryWidth / 2, 0, -scene.userData.galleryLength / 2 + offsetFromWall),
+                    max: new THREE.Vector3(scene.userData.galleryWidth / 2, scene.userData.galleryHeight, -scene.userData.galleryLength / 2 + doorZone)
+                });
+                
+                // Front wall collision (solid)
+                collisionWalls.push({
+                    min: new THREE.Vector3(-scene.userData.galleryWidth / 2, 0, scene.userData.galleryLength / 2 - doorZone),
+                    max: new THREE.Vector3(scene.userData.galleryWidth / 2, scene.userData.galleryHeight, scene.userData.galleryLength / 2 - offsetFromWall)
+                });
+            }
+            
+            // Set up collision objects
+            setupCollisions();
+            
+            // Movement and controls
+            const controls = new GalleryControls(camera, scene, collisionWalls);
+            controls.setupEventListeners();
+            
+            const velocity = new THREE.Vector3();
+            const direction = new THREE.Vector3();
+            let prevTime = performance.now();
+            let walkCycle = 0;  // For bobbing motion
+
+            // Train system setup
+            const trainSystem = {
+                carts: [],
+                track: null,
+                speed: 100.0,  // Increased significantly for much faster movement
+                direction: 1,
+                currentPosition: 0,
+                lastTime: 0
+            };
+            
+            // Current artwork display element
+            const controlsInfoElement = document.getElementById('controls-info');
+            const artworkInfoElement = document.getElementById('artwork-info');
+            
+            // Create a shared texture loader
+            const textureLoader = new THREE.TextureLoader();
+            
+            // Load all artwork textures
+            const artworkTextures = [];
+            for (let i = 1; i <= 19; i++) {
+                const texture = textureLoader.load(`images/piece${i}.jpg`, (texture) => {
+                    // Enable texture size optimization
+                    texture.minFilter = THREE.LinearFilter;
+                    texture.generateMipmaps = false;
+                    
+                    // Limit maximum texture size
+                    const maxSize = 1024;  // Reduced from default
+                    if (texture.image.width > maxSize || texture.image.height > maxSize) {
+                        const scale = Math.min(maxSize / texture.image.width, maxSize / texture.image.height);
+                        texture.image.width *= scale;
+                        texture.image.height *= scale;
+                    }
+                    
+                    texture.needsUpdate = true;
+                });
+                texture.colorSpace = THREE.SRGBColorSpace;
+                artworkTextures.push(texture);
+            }
+
+            // Create a fallback texture in case images fail to load
+            function createFallbackTexture(width, height, index) {
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const context = canvas.getContext('2d');
+                
+                // Fill background
+                context.fillStyle = '#cccccc';
+                context.fillRect(0, 0, width, height);
+                
+                // Add text
+                context.fillStyle = '#666666';
+                context.font = '30px Arial';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText(`Piece ${index + 1}`, width/2, height/2);
+                
+                // Create texture from canvas
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.colorSpace = THREE.SRGBColorSpace;
+                return texture;
+            }
+            
+            // Update artwork titles with descriptions
+            const artworkTitles = [];
+            for (let i = 1; i <= 19; i++) {
+                artworkTitles.push(artworkDescriptions[i-1] || `Piece ${i}`);
+            }
+            
+            // NPCs
+            const npcs = [];
+            const npcCount = 24;  // Increased from 12 to 24 NPCs
+
+            function createCuteMinecraftVillager() {
+                const group = new THREE.Group();
+                const scale = 0.5;  // Half the original size
+
+                // Give each group some random colors
+                const skinColor = new THREE.Color(Math.random(), Math.random(), Math.random());
+                const clothesColor = new THREE.Color(Math.random(), Math.random(), Math.random());
+
+                const headGeometry = new THREE.BoxGeometry(1 * scale, 1 * scale, 1 * scale);
+                const headMaterial = new THREE.MeshBasicMaterial({ color: skinColor });
+                const head = new THREE.Mesh(headGeometry, headMaterial);
+                head.position.y = 0.8 * scale;
+                group.add(head);
+
+                const bodyGeometry = new THREE.BoxGeometry(0.8 * scale, 0.8 * scale, 0.5 * scale);
+                const bodyMaterial = new THREE.MeshBasicMaterial({ color: clothesColor });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.position.y = 0;
+                group.add(body);
+
+                const armGeometry = new THREE.BoxGeometry(0.3 * scale, 0.8 * scale, 0.3 * scale);
+                const leftArm = new THREE.Mesh(armGeometry, bodyMaterial);
+                leftArm.position.set(-0.55 * scale, 0, 0);
+                group.add(leftArm);
+                const rightArm = new THREE.Mesh(armGeometry, bodyMaterial);
+                rightArm.position.set(0.55 * scale, 0, 0);
+                group.add(rightArm);
+
+                const legGeometry = new THREE.BoxGeometry(0.3 * scale, 0.5 * scale, 0.3 * scale);
+                const pantsMaterial = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color(clothesColor).multiplyScalar(0.7)
+                });
+                const leftLeg = new THREE.Mesh(legGeometry, pantsMaterial);
+                leftLeg.position.set(-0.2 * scale, -0.65 * scale, 0);
+                group.add(leftLeg);
+                const rightLeg = new THREE.Mesh(legGeometry, pantsMaterial);
+                rightLeg.position.set(0.2 * scale, -0.65 * scale, 0);
+                group.add(rightLeg);
+
+                // Add random walking style parameters
+                group.userData.walkStyle = {
+                    frequency: 0.8 + Math.random() * 0.4,  // Random walking speed
+                    legAmplitude: 0.3 + Math.random() * 0.4,  // Random leg swing
+                    armAmplitude: 0.2 + Math.random() * 0.5,  // Random arm swing
+                    bodyTilt: (Math.random() - 0.5) * 0.1,  // Slight random body tilt
+                    headBob: 0.05 + Math.random() * 0.1,  // Random head bobbing
+                    swayAmount: Math.random() * 0.1  // Random side-to-side sway
+                };
+
+                return group;
+            }
+
+            function createNPC() {
+                const npc = createCuteMinecraftVillager();
+                
+                // Random starting position within the gallery
+                const x = (Math.random() - 0.5) * (scene.userData.galleryWidth - 2);
+                const z = -scene.userData.galleryLength / 2 + 5 + Math.random() * (scene.userData.galleryLength - 10);
+                npc.position.set(x, 0.65, z);  // Adjusted Y position for smaller size
+                
+                // Add random movement properties
+                npc.userData.velocity = new THREE.Vector3();
+                npc.userData.direction = new THREE.Vector3(
+                    Math.random() - 0.5,
+                    0,
+                    Math.random() - 0.5
+                ).normalize();
+                npc.userData.speed = 0.2 + Math.random() * 0.5;  // More varied speeds
+                npc.userData.changeDirectionTime = Math.random() * 8000;
+                npc.userData.lastDirectionChange = performance.now();
+                npc.userData.walkCycle = Math.random() * Math.PI * 2;
+                npc.userData.pauseTime = 0;  // For random pausing
+                npc.userData.isPaused = false;
+                
+                scene.add(npc);
+                npcs.push(npc);
+                return npc;
+            }
+
+            // Create initial NPCs
+            for (let i = 0; i < npcCount; i++) {
+                createNPC();
+            }
+
+            function updateNPCs(time) {
+                for (const npc of npcs) {
+                    // Random pausing behavior
+                    if (!npc.userData.isPaused) {
+                        if (Math.random() < 0.001) {  // Small chance to pause
+                            npc.userData.isPaused = true;
+                            npc.userData.pauseTime = time + Math.random() * 3000;  // Pause for 0-3 seconds
+                        }
+                    } else if (time > npc.userData.pauseTime) {
+                        npc.userData.isPaused = false;
+                    }
+
+                    if (!npc.userData.isPaused) {
+                        // Change direction randomly or when near walls
+                        if (time - npc.userData.lastDirectionChange > npc.userData.changeDirectionTime) {
+                            const angle = Math.random() * Math.PI * 2;
+                            npc.userData.direction.set(
+                                Math.cos(angle),
+                                0,
+                                Math.sin(angle)
+                            ).normalize();
+                            npc.userData.changeDirectionTime = 3000 + Math.random() * 8000;
+                            npc.userData.lastDirectionChange = time;
+                        }
+                        
+                        // Calculate new position
+                        const newPosition = npc.position.clone();
+                        newPosition.x += npc.userData.direction.x * npc.userData.speed * 0.02;
+                        newPosition.z += npc.userData.direction.z * npc.userData.speed * 0.02;
+                        
+                        // Boundary checks and collision avoidance
+                        const margin = 1;
+                        if (newPosition.x < -scene.userData.galleryWidth/2 + margin || newPosition.x > scene.userData.galleryWidth/2 - margin) {
+                            npc.userData.direction.x *= -1;
+                        } else if (newPosition.z < -scene.userData.galleryLength/2 + margin || newPosition.z > scene.userData.galleryLength/2 - margin) {
+                            npc.userData.direction.z *= -1;
+                        } else if (!checkCollisions(newPosition)) {
+                            npc.position.copy(newPosition);
+                            // Rotate NPC to face movement direction
+                            npc.rotation.y = Math.atan2(npc.userData.direction.x, npc.userData.direction.z);
+                            
+                            // Apply walking style
+                            const style = npc.userData.walkStyle;
+                            npc.userData.walkCycle += style.frequency * 0.1;
+                            
+                            // Leg animation with unique style
+                            const leftLeg = npc.children[4];
+                            const rightLeg = npc.children[5];
+                            leftLeg.rotation.x = Math.sin(npc.userData.walkCycle) * style.legAmplitude;
+                            rightLeg.rotation.x = Math.sin(npc.userData.walkCycle + Math.PI) * style.legAmplitude;
+                            
+                            // Arm animation with unique style
+                            const leftArm = npc.children[2];
+                            const rightArm = npc.children[3];
+                            leftArm.rotation.x = Math.sin(npc.userData.walkCycle + Math.PI) * style.armAmplitude;
+                            rightArm.rotation.x = Math.sin(npc.userData.walkCycle) * style.armAmplitude;
+                            
+                            // Body and head movement
+                            const body = npc.children[1];
+                            const head = npc.children[0];
+                            body.rotation.z = Math.sin(npc.userData.walkCycle * 2) * style.swayAmount + style.bodyTilt;
+                            head.rotation.x = Math.sin(npc.userData.walkCycle * 2) * style.headBob;
+                        }
+                    } else {
+                        // Reset animations while paused
+                        npc.children.forEach(part => part.rotation.set(0, 0, 0));
+                    }
+                }
+            }
+            
+            // Create the gallery environment
+            function createGallery() {
+                // Floor with meadow appearance
+                createFloor();
+                
+                // Ceiling with pleats
+                const pleatWidth = 2 * 5;  // Width of each pleat
+                const pleatDepth = 0.2 * 5;  // Reduced depth for more subtle pleats
+                const pleatCount = Math.floor(scene.userData.galleryWidth / pleatWidth);
+                
+                // Create pleated ceiling material
+                const ceilingMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xffffff,
+                    roughness: 0.8,
+                    metalness: 0.2,
+                    side: THREE.DoubleSide
+                });
+                
+                // Create pleated ceiling geometry
+                const ceilingGeometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const uvs = [];
+                const indices = [];
+                
+                // Create vertices for pleated ceiling
+                for (let i = 0; i <= pleatCount; i++) {
+                    const x = -scene.userData.galleryWidth/2 + i * pleatWidth;
+                    const z = -scene.userData.galleryLength/2;
+                    
+                    // Top vertex
+                    vertices.push(x, scene.userData.galleryHeight, z);
+                    uvs.push(i / pleatCount, 0);
+                    
+                    // Bottom vertex (with pleat)
+                    vertices.push(x, scene.userData.galleryHeight - pleatDepth, z);
+                    uvs.push(i / pleatCount, 1);
+                }
+                
+                // Create triangles for pleated ceiling
+                for (let i = 0; i < pleatCount; i++) {
+                    const baseIndex = i * 2;
+                    // First triangle
+                    indices.push(baseIndex, baseIndex + 1, baseIndex + 2);
+                    // Second triangle
+                    indices.push(baseIndex + 1, baseIndex + 3, baseIndex + 2);
+                }
+                
+                // Extend the pleats along the length of the gallery
+                const lengthSegments = Math.floor(scene.userData.galleryLength / pleatWidth);
+                for (let j = 1; j <= lengthSegments; j++) {
+                    const z = -scene.userData.galleryLength/2 + j * pleatWidth;
+                    for (let i = 0; i <= pleatCount; i++) {
+                        const x = -scene.userData.galleryWidth/2 + i * pleatWidth;
+                        
+                        // Top vertex
+                        vertices.push(x, scene.userData.galleryHeight, z);
+                        uvs.push(i / pleatCount, j / lengthSegments);
+                        
+                        // Bottom vertex (with pleat)
+                        vertices.push(x, scene.userData.galleryHeight - pleatDepth, z);
+                        uvs.push(i / pleatCount, j / lengthSegments);
+                    }
+                    
+                    // Create triangles for this segment
+                    const baseIndex = (j - 1) * (pleatCount + 1) * 2;
+                    for (let i = 0; i < pleatCount; i++) {
+                        const segmentBaseIndex = baseIndex + i * 2;
+                        // First triangle
+                        indices.push(segmentBaseIndex, segmentBaseIndex + 1, segmentBaseIndex + 2);
+                        // Second triangle
+                        indices.push(segmentBaseIndex + 1, segmentBaseIndex + 3, segmentBaseIndex + 2);
+                    }
+                }
+                
+                ceilingGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                ceilingGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+                ceilingGeometry.setIndex(indices);
+                ceilingGeometry.computeVertexNormals();
+                
+                const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
+                ceiling.receiveShadow = true;
+                scene.add(ceiling);
+                
+                // Walls
+                createWalls();
+                
+                // Artworks
+                placeArtworks();
+                
+                // Lights
+                createLights();
+                
+                // Add railway system
+                createRailwaySystem();
+            }
+            
+            function createFloor() {
+                const floorGeometry = new THREE.PlaneGeometry(scene.userData.galleryWidth, scene.userData.galleryLength);
+                const textureLoader = new THREE.TextureLoader();
+                const woodTexture = textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg');
+                woodTexture.wrapS = THREE.RepeatWrapping;
+                woodTexture.wrapT = THREE.RepeatWrapping;
+                woodTexture.repeat.set(40, 40);  // Increased from 8,8 to 40,40 for 5x smaller pattern
+                
+                const floorMaterial = new THREE.MeshStandardMaterial({ 
+                    map: woodTexture,
+                    roughness: 0.8,
+                    metalness: 0.2,
+                    side: THREE.DoubleSide
+                });
+                
+                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                floor.rotation.x = -Math.PI / 2;
+                floor.receiveShadow = true;
+                scene.add(floor);
+            }
+            
+            function createWalls() {
+                const wallMaterial = new THREE.MeshStandardMaterial({
+                    map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
+                    roughness: 0.8,
+                    metalness: 0.2,
+                    side: THREE.DoubleSide
+                });
+
+                // Create back wall (solid)
+                const backWall = new THREE.Mesh(
+                    new THREE.PlaneGeometry(scene.userData.galleryWidth, scene.userData.galleryHeight),
+                    wallMaterial
+                );
+                backWall.position.set(0, scene.userData.galleryHeight/2, -scene.userData.galleryLength/2);
+                backWall.receiveShadow = true;
+                backWall.material.map.repeat.set(40, 40);  // 5x smaller pattern
+                scene.add(backWall);
+
+                // Create side walls
+                const leftWall = new THREE.Mesh(
+                    new THREE.PlaneGeometry(scene.userData.galleryLength, scene.userData.galleryHeight),
+                    wallMaterial
+                );
+                leftWall.position.x = -scene.userData.galleryWidth/2;
+                leftWall.position.y = scene.userData.galleryHeight/2;
+                leftWall.rotation.y = Math.PI/2;
+                leftWall.receiveShadow = true;
+                leftWall.material.map.repeat.set(40, 40);  // 5x smaller pattern
+                scene.add(leftWall);
+
+                const rightWall = new THREE.Mesh(
+                    new THREE.PlaneGeometry(scene.userData.galleryLength, scene.userData.galleryHeight),
+                    wallMaterial
+                );
+                rightWall.position.x = scene.userData.galleryWidth/2;
+                rightWall.position.y = scene.userData.galleryHeight/2;
+                rightWall.rotation.y = -Math.PI/2;
+                rightWall.receiveShadow = true;
+                rightWall.material.map.repeat.set(40, 40);  // 5x smaller pattern
+                scene.add(rightWall);
+
+                // Create front wall (solid)
+                const frontWall = new THREE.Mesh(
+                    new THREE.PlaneGeometry(scene.userData.galleryWidth, scene.userData.galleryHeight),
+                    wallMaterial
+                );
+                frontWall.position.set(0, scene.userData.galleryHeight/2, scene.userData.galleryLength/2);
+                frontWall.receiveShadow = true;
+                frontWall.material.map.repeat.set(40, 40);  // 5x smaller pattern
+                scene.add(frontWall);
+            }
+            
+            function createFramedArtwork(texture, width, height, title, index) {
+                const frameThickness = 0.1;
+                const frameBorderSize = 0.12;
+                
+                // Create group for the artwork and frame
+                const artworkGroup = new THREE.Group();
+                artworkGroup.userData = { title: title, index: index };
+                
+                // Create artwork
+                const artworkGeometry = new THREE.PlaneGeometry(width, height);
+                const artworkMaterial = new THREE.MeshBasicMaterial({ 
+                    map: texture,
+                    side: THREE.FrontSide
+                });
+                const artwork = new THREE.Mesh(artworkGeometry, artworkMaterial);
+                artwork.position.z = frameThickness / 2 + 0.01;  // Slightly in front of the backing
+                artworkGroup.add(artwork);
+                
+                // Create backing
+                const backingGeometry = new THREE.BoxGeometry(width + frameBorderSize * 2, height + frameBorderSize * 2, frameThickness);
+                const backingMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xf5f5f5,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                const backing = new THREE.Mesh(backingGeometry, backingMaterial);
+                artworkGroup.add(backing);
+                
+                // Create frame
+                const frameColor = 0x8B4513;  // Wood brown
+                const frameMaterial = new THREE.MeshStandardMaterial({ 
+                    color: frameColor,
+                    roughness: 0.7,
+                    metalness: 0.3
+                });
+                
+                // Top frame
+                const topFrameGeometry = new THREE.BoxGeometry(width + frameBorderSize * 2, frameBorderSize, frameThickness * 1.5);
+                const topFrame = new THREE.Mesh(topFrameGeometry, frameMaterial);
+                topFrame.position.y = height / 2 + frameBorderSize / 2;
+                topFrame.position.z = frameThickness / 2;
+                artworkGroup.add(topFrame);
+                
+                // Bottom frame
+                const bottomFrameGeometry = new THREE.BoxGeometry(width + frameBorderSize * 2, frameBorderSize, frameThickness * 1.5);
+                const bottomFrame = new THREE.Mesh(bottomFrameGeometry, frameMaterial);
+                bottomFrame.position.y = -height / 2 - frameBorderSize / 2;
+                bottomFrame.position.z = frameThickness / 2;
+                artworkGroup.add(bottomFrame);
+                
+                // Left frame
+                const leftFrameGeometry = new THREE.BoxGeometry(frameBorderSize, height, frameThickness * 1.5);
+                const leftFrame = new THREE.Mesh(leftFrameGeometry, frameMaterial);
+                leftFrame.position.x = -width / 2 - frameBorderSize / 2;
+                leftFrame.position.z = frameThickness / 2;
+                artworkGroup.add(leftFrame);
+                
+                // Right frame
+                const rightFrameGeometry = new THREE.BoxGeometry(frameBorderSize, height, frameThickness * 1.5);
+                const rightFrame = new THREE.Mesh(rightFrameGeometry, frameMaterial);
+                rightFrame.position.x = width / 2 + frameBorderSize / 2;
+                rightFrame.position.z = frameThickness / 2;
+                artworkGroup.add(rightFrame);
+                
+                return artworkGroup;
+            }
+            
+            function placeArtworks() {
+                const artworks = [];
+                const artworkWidth = 3.5 * 5;    // Scaled up 5x
+                const artworkHeight = 4.5 * 5;   // Scaled up 5x
+                const artworkSpacing = 8 * 5;    // Scaled up 5x
+                const artworkWallOffset = 0.12 * 5; // Scaled up 5x
+                const artworkYPosition = artworkHeight / 2 + 3;  // Increased from 2.8 to 3
+                
+                // Place artworks on left wall (facing right)
+                for (let i = 0; i < 9; i++) {
+                    const artwork = createFramedArtwork(
+                        artworkTextures[i] || createFallbackTexture(600, 800, i), 
+                        artworkWidth, 
+                        artworkHeight, 
+                        artworkTitles[i],
+                        i
+                    );
+                    
+                    const zPos = -scene.userData.galleryLength / 2 + 10 + i * artworkSpacing;
+                    
+                    artwork.position.set(
+                        -scene.userData.galleryWidth / 2 + artworkWallOffset + 0.001, 
+                        artworkYPosition, 
+                        zPos
+                    );
+                    
+                    artwork.rotation.y = Math.PI / 2;  // Rotate to face right
+                    scene.add(artwork);
+                    artworks.push(artwork);
+                }
+                
+                // Place artworks on right wall (facing left)
+                for (let i = 0; i < 10; i++) {
+                    const artwork = createFramedArtwork(
+                        artworkTextures[i + 9] || createFallbackTexture(600, 800, i + 9), 
+                        artworkWidth, 
+                        artworkHeight, 
+                        artworkTitles[i + 9],
+                        i + 9
+                    );
+                    
+                    const zPos = -scene.userData.galleryLength / 2 + 10 + i * artworkSpacing;
+                    
+                    artwork.position.set(
+                        scene.userData.galleryWidth / 2 - artworkWallOffset - 0.001, 
+                        artworkYPosition, 
+                        zPos
+                    );
+                    
+                    artwork.rotation.y = -Math.PI / 2;  // Rotate to face left
+                    scene.add(artwork);
+                    artworks.push(artwork);
+                }
+                
+                return artworks;
+            }
+            
+            function createLights() {
+                // Ambient light - increased intensity
+                const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);  // Increased from 0.5 to 1.0
+                scene.add(ambientLight);
+                
+                // Add fewer spotlights to light the gallery (to reduce shader complexity)
+                const spotlightColor = 0xffffff;
+                const spotlightIntensity = 5;  // Increased from 3 to 5
+                const spotlightDistance = 30;  // Increased from 20 to 30
+                const spotlightAngle = Math.PI / 4;  // Widened angle
+                const spotlightPenumbra = 0.7;  // Increased softness
+                
+                // Use fewer spotlights - just 3 per wall to reduce shader complexity
+                // Left wall spotlights
+                const leftPositions = [-scene.userData.galleryLength / 3, 0, scene.userData.galleryLength / 3];
+                for (let i = 0; i < leftPositions.length; i++) {
+                    const zPos = leftPositions[i];
+                    
+                    const spotlight = new THREE.SpotLight(
+                        spotlightColor, 
+                        spotlightIntensity, 
+                        spotlightDistance, 
+                        spotlightAngle, 
+                        spotlightPenumbra
+                    );
+                    
+                    spotlight.position.set(-scene.userData.galleryWidth / 2 + 2, scene.userData.galleryHeight - 0.5, zPos);
+                    spotlight.target.position.set(-scene.userData.galleryWidth / 2 + 0.1, 0, zPos);  // Point lower
+                    
+                    spotlight.castShadow = true;
+                    spotlight.shadow.bias = -0.0001;
+                    spotlight.shadow.mapSize.width = 1024;  // Increased shadow quality
+                    spotlight.shadow.mapSize.height = 1024;
+                    
+                    scene.add(spotlight);
+                    scene.add(spotlight.target);
+                }
+                
+                // Right wall spotlights
+                const rightPositions = [-scene.userData.galleryLength / 3, 0, scene.userData.galleryLength / 3];
+                for (let i = 0; i < rightPositions.length; i++) {
+                    const zPos = rightPositions[i];
+                    
+                    const spotlight = new THREE.SpotLight(
+                        spotlightColor, 
+                        spotlightIntensity, 
+                        spotlightDistance, 
+                        spotlightAngle, 
+                        spotlightPenumbra
+                    );
+                    
+                    spotlight.position.set(scene.userData.galleryWidth / 2 - 2, scene.userData.galleryHeight - 0.5, zPos);
+                    spotlight.target.position.set(scene.userData.galleryWidth / 2 - 0.1, 0, zPos);  // Point lower
+                    
+                    spotlight.castShadow = true;
+                    spotlight.shadow.bias = -0.0001;
+                    spotlight.shadow.mapSize.width = 1024;  // Increased shadow quality
+                    spotlight.shadow.mapSize.height = 1024;
+                    
+                    scene.add(spotlight);
+                    scene.add(spotlight.target);
+                }
+                
+                // Simplify the main lighting - use a hemispherical light instead of directional
+                const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x404040, 1.2);  // Increased from 0.8 to 1.2
+                scene.add(hemisphereLight);
+            }
+            
+            function checkCollisions(position) {
+                // Create a box representing the player
+                const playerSize = 0.5;  // Half-width of player
+                const playerHeight = 1.8;  // Height of player
+                
+                const playerMin = new THREE.Vector3(
+                    position.x - playerSize,
+                    position.y,
+                    position.z - playerSize
+                );
+                
+                const playerMax = new THREE.Vector3(
+                    position.x + playerSize,
+                    position.y + playerHeight,
+                    position.z + playerSize
+                );
+                
+                // Check collision with each wall
+                for (const wall of collisionWalls) {
+                    // Check for intersection
+                    if (
+                        playerMax.x > wall.min.x && playerMin.x < wall.max.x &&
+                        playerMax.y > wall.min.y && playerMin.y < wall.max.y &&
+                        playerMax.z > wall.min.z && playerMin.z < wall.max.z
+                    ) {
+                        return true;  // Collision detected
+                    }
+                }
+                
+                return false;  // No collision
+            }
+            
+            // Set initial camera position (randomly positioned in front of an artwork)
+            function setRandomInitialPosition() {
+                // Decide which wall (left or right) randomly
+                const isLeftWall = Math.random() < 0.5;
+                
+                // Calculate a random position along the wall
+                const zPos = -scene.userData.galleryLength / 2 + 10 + Math.floor(Math.random() * 9) * (8 * 5);
+                
+                // Position camera in the middle of the corridor (x = 0)
+                const xPos = 0;  // Middle of the corridor
+                
+                // Position camera
+                camera.position.set(xPos, 0.8, zPos);
+                
+                // Make camera face the chosen wall
+                if (isLeftWall) {
+                    camera.lookAt(new THREE.Vector3(-scene.userData.galleryWidth / 2, 0.8, zPos));
+                } else {
+                    camera.lookAt(new THREE.Vector3(scene.userData.galleryWidth / 2, 0.8, zPos));
+                }
+            }
+
+            // Initialize gallery, controls, and set random position
+            createGallery();
+            const galleryControls = new GalleryControls(camera, scene, collisionWalls);
+            setRandomInitialPosition();
+
+            // Initialize mobile controls
+            if (window.matchMedia("(max-width: 768px)").matches || window.matchMedia("(max-height: 768px)").matches) {
+                let joystickContainer = null;
+                let joystickDot = null;
+                let directionIndicator = null;
+                let isDragging = false;
+                let startX = 0;
+                let startY = 0;
+                let currentX = 0;
+                let currentY = 0;
+
+                function createJoystickUI() {
+                    // Remove existing elements if any
+                    if (joystickContainer) joystickContainer.remove();
+                    if (directionIndicator) directionIndicator.remove();
+
+                    // Create joystick container
+                    joystickContainer = document.createElement('div');
+                    joystickContainer.style.position = 'fixed';
+                    joystickContainer.style.left = '60px';
+                    joystickContainer.style.bottom = '60px';
+                    joystickContainer.style.width = '100px';
+                    joystickContainer.style.height = '100px';
+                    joystickContainer.style.borderRadius = '50%';
+                    joystickContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                    joystickContainer.style.border = '2px solid rgba(255, 255, 255, 0.5)';
+                    joystickContainer.style.zIndex = '1000';
+
+                    // Create inner joystick dot
+                    joystickDot = document.createElement('div');
+                    joystickDot.style.position = 'absolute';
+                    joystickDot.style.width = '30px';
+                    joystickDot.style.height = '30px';
+                    joystickDot.style.borderRadius = '50%';
+                    joystickDot.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+                    joystickDot.style.left = '50%';
+                    joystickDot.style.top = '50%';
+                    joystickDot.style.transform = 'translate(-50%, -50%)';
+                    joystickContainer.appendChild(joystickDot);
+
+                    // Create direction dots
+                    const dotSize = '8px';
+                    const dotStyle = {
+                        position: 'absolute',
+                        width: dotSize,
+                        height: dotSize,
+                        borderRadius: '50%',
+                        opacity: '0.5'
+                    };
+
+                    // W (Up) - Red
+                    const wDot = document.createElement('div');
+                    Object.assign(wDot.style, dotStyle, {
+                        top: '5px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        backgroundColor: '#ff0000'
+                    });
+                    joystickContainer.appendChild(wDot);
+
+                    // A (Left) - Blue
+                    const aDot = document.createElement('div');
+                    Object.assign(aDot.style, dotStyle, {
+                        left: '5px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        backgroundColor: '#0000ff'
+                    });
+                    joystickContainer.appendChild(aDot);
+
+                    // S (Down) - Green
+                    const sDot = document.createElement('div');
+                    Object.assign(sDot.style, dotStyle, {
+                        bottom: '5px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        backgroundColor: '#00ff00'
+                    });
+                    joystickContainer.appendChild(sDot);
+
+                    // D (Right) - Yellow
+                    const dDot = document.createElement('div');
+                    Object.assign(dDot.style, dotStyle, {
+                        right: '5px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        backgroundColor: '#ffff00'
+                    });
+                    joystickContainer.appendChild(dDot);
+
+                    document.body.appendChild(joystickContainer);
+
+                    // Add touch event listeners
+                    joystickContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+                    joystickContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+                    joystickContainer.addEventListener('touchend', handleTouchEnd);
+                }
+
+                function handleTouchStart(event) {
+                    const touch = event.touches[0];
+                    const rect = joystickContainer.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    
+                    startX = touch.clientX - centerX;
+                    startY = touch.clientY - centerY;
+                    isDragging = true;
+                }
+
+                function handleTouchMove(event) {
+                    if (!isDragging) return;
+                    event.preventDefault();
+
+                    const touch = event.touches[0];
+                    const rect = joystickContainer.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+
+                    currentX = touch.clientX - centerX;
+                    currentY = touch.clientY - centerY;
+
+                    // Calculate distance from center
+                    const distance = Math.sqrt(currentX * currentX + currentY * currentY);
+                    const maxDistance = rect.width / 2 - 15; // Half of container minus half of dot
+
+                    // Limit joystick movement to circle
+                    if (distance > maxDistance) {
+                        const angle = Math.atan2(currentY, currentX);
+                        currentX = Math.cos(angle) * maxDistance;
+                        currentY = Math.sin(angle) * maxDistance;
+                    }
+
+                    // Update joystick dot position
+                    joystickDot.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
+
+                    // Calculate direction vector
+                    const vector = {
+                        x: currentX / maxDistance,
+                        y: currentY / maxDistance
+                    };
+
+                    // Update direction indicators
+                    const dots = joystickContainer.children;
+                    dots[1].style.opacity = vector.y < -0.5 ? '1' : '0.5';  // W (Up)
+                    dots[2].style.opacity = vector.x < -0.5 ? '1' : '0.5';  // A (Left)
+                    dots[3].style.opacity = vector.y > 0.5 ? '1' : '0.5';   // S (Down)
+                    dots[4].style.opacity = vector.x > 0.5 ? '1' : '0.5';   // D (Right)
+
+                    // Update movement vector without affecting camera rotation
+                    const forward = new THREE.Vector3();
+                    camera.getWorldDirection(forward);
+                    forward.y = 0;
+                    forward.normalize();
+
+                    const right = new THREE.Vector3();
+                    right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
+
+                    const moveDirection = new THREE.Vector3();
+                    moveDirection.addScaledVector(forward, -vector.y);
+                    moveDirection.addScaledVector(right, vector.x);
+                    moveDirection.normalize();
+
+                    galleryControls.moveVector.copy(moveDirection);
+                }
+
+                function handleTouchEnd() {
+                    isDragging = false;
+                    // Reset joystick position
+                    joystickDot.style.transform = 'translate(-50%, -50%)';
+                    // Reset movement
+                    galleryControls.moveVector.set(0, 0, 0);
+                    // Reset direction indicators
+                    const dots = joystickContainer.children;
+                    Array.from(dots).slice(1).forEach(dot => {
+                        dot.style.opacity = '0.5';
+                    });
+                }
+
+                // Create initial joystick UI
+                createJoystickUI();
+
+                // Handle orientation changes
+                window.addEventListener('orientationchange', () => {
+                    setTimeout(createJoystickUI, 100);
+                });
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    const isLandscape = window.innerWidth > window.innerHeight;
+                    if (isLandscape !== (window.innerWidth > window.innerHeight)) {
+                        createJoystickUI();
+                    }
+                });
+
+                // Handle camera control outside joystick area
+                let cameraStartRotation = null;
+
+                document.addEventListener('touchstart', (event) => {
+                    const touch = event.touches[0];
+                    const rect = joystickContainer.getBoundingClientRect();
+                    
+                    if (touch.clientX < rect.left || touch.clientX > rect.right ||
+                        touch.clientY < rect.top || touch.clientY > rect.bottom) {
+                        isDragging = true;
+                        startX = touch.clientX;
+                        startY = touch.clientY;
+                        // Store initial camera rotation
+                        cameraStartRotation = {
+                            x: camera.rotation.x,
+                            y: camera.rotation.y
+                        };
+                    }
+                }, { passive: true });
+
+                document.addEventListener('touchmove', (event) => {
+                    if (isDragging && cameraStartRotation) {
+                        event.preventDefault();
+                        const touch = event.touches[0];
+                        const deltaX = touch.clientX - startX;
+                        const deltaY = touch.clientY - startY;
+                        
+                        // Apply rotation relative to initial camera position
+                        camera.rotation.y = cameraStartRotation.y - deltaX * 0.002;
+                        camera.rotation.x = cameraStartRotation.x - deltaY * 0.002;
+                        
+                        // Limit vertical rotation
+                        camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+                    }
+                }, { passive: false });
+
+                document.addEventListener('touchend', () => {
+                    isDragging = false;
+                    cameraStartRotation = null;
+                });
+
+                // Handle joystick movement without affecting camera
+                function handleTouchMove(event) {
+                    if (!isDragging) return;
+                    event.preventDefault();
+
+                    const touch = event.touches[0];
+                    const rect = joystickContainer.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+
+                    currentX = touch.clientX - centerX;
+                    currentY = touch.clientY - centerY;
+
+                    // Calculate distance from center
+                    const distance = Math.sqrt(currentX * currentX + currentY * currentY);
+                    const maxDistance = rect.width / 2 - 15; // Half of container minus half of dot
+
+                    // Limit joystick movement to circle
+                    if (distance > maxDistance) {
+                        const angle = Math.atan2(currentY, currentX);
+                        currentX = Math.cos(angle) * maxDistance;
+                        currentY = Math.sin(angle) * maxDistance;
+                    }
+
+                    // Update joystick dot position
+                    joystickDot.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
+
+                    // Calculate direction vector
+                    const vector = {
+                        x: currentX / maxDistance,
+                        y: currentY / maxDistance
+                    };
+
+                    // Update direction indicators
+                    const dots = joystickContainer.children;
+                    dots[1].style.opacity = vector.y < -0.5 ? '1' : '0.5';  // W (Up)
+                    dots[2].style.opacity = vector.x < -0.5 ? '1' : '0.5';  // A (Left)
+                    dots[3].style.opacity = vector.y > 0.5 ? '1' : '0.5';   // S (Down)
+                    dots[4].style.opacity = vector.x > 0.5 ? '1' : '0.5';   // D (Right)
+
+                    // Update movement vector without affecting camera rotation
+                    const forward = new THREE.Vector3();
+                    camera.getWorldDirection(forward);
+                    forward.y = 0;
+                    forward.normalize();
+
+                    const right = new THREE.Vector3();
+                    right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
+
+                    const moveDirection = new THREE.Vector3();
+                    moveDirection.addScaledVector(forward, -vector.y);
+                    moveDirection.addScaledVector(right, vector.x);
+                    moveDirection.normalize();
+
+                    galleryControls.moveVector.copy(moveDirection);
+                }
+
+                // Remove auto-hide timers and modify click behavior
+                const welcomePopup = document.getElementById('welcome-popup');
+                const sceneContainer = document.getElementById('scene-container');
+
+                // Handle right-click to show welcome popup and controls
+                document.addEventListener('contextmenu', (event) => {
+                    event.preventDefault();  // Prevent default context menu
+                    
+                    // Show welcome popup
+                    welcomePopup.style.display = 'flex';
+                    welcomePopup.style.opacity = '1';
+                    
+                    // Show controls info
+                    controlsInfoElement.style.display = 'block';
+                    
+                    // Don't lock controls on right click
+                    if (!controls.isLocked) {
+                        return;
+                    }
+                });
+
+                // Modify the first click handler to store the elements' display state
+                function handleFirstClick() {
+                    // Fade out welcome popup
+                    welcomePopup.style.opacity = '0';
+                    setTimeout(() => {
+                        welcomePopup.style.display = 'none';
+                    }, 2000);
+
+                    // Lock pointer for camera control
+                    controls.lock();
+                }
+                
+                // Add click listener for initial interaction
+                document.addEventListener('click', handleFirstClick);
+
+                // Remove auto-hide controls info timer
+                galleryControls.addEventListener('lock', function () {
+                    // Keep controls visible until movement
+                    controlsInfoElement.style.display = 'block';
+                });
+                
+                galleryControls.addEventListener('unlock', function () {
+                    controlsInfoElement.style.display = 'block';
+                });
+
+                // Add movement listener to hide controls
+                document.addEventListener('keydown', function(event) {
+                    if (['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(event.code)) {
+                        controlsInfoElement.style.display = 'none';
+                    }
+                    // Show welcome popup and controls info when ESC is pressed
+                    if (event.code === 'Escape') {
+                        welcomePopup.style.display = 'flex';
+                        welcomePopup.style.opacity = '1';
+                        controlsInfoElement.style.display = 'block';
+                    }
+                });
+                
+                // Check if user is looking at an artwork
+                function checkArtworkFocus() {
+                    const raycaster = new THREE.Raycaster();
+                    const direction = new THREE.Vector3();
+                    
+                    camera.getWorldDirection(direction);
+                    raycaster.set(camera.position, direction);
+                    
+                    const intersects = raycaster.intersectObjects(scene.children, true);
+                    let foundArtwork = false;
+                    
+                    if (intersects.length > 0) {
+                        for (let i = 0; i < intersects.length; i++) {
+                            let obj = intersects[i].object;
+                            let artworkParent = null;
+                            
+                            while (obj && !artworkParent) {
+                                if (obj.userData && obj.userData.title) {
+                                    artworkParent = obj;
+                                }
+                                obj = obj.parent;
+                            }
+                            
+                            if (artworkParent) {
+                                const distance = intersects[i].distance;
+                                if (distance < 25) {  // Increased viewing distance from 15 to 25 units
+                                    artworkInfoElement.innerHTML = artworkParent.userData.title.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                                    artworkInfoElement.style.display = 'block';
+                                    foundArtwork = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (!foundArtwork) {
+                        artworkInfoElement.style.display = 'none';
+                    }
+                }
+                
+                // Add train and railway system
+                function createRailwaySystem() {
+                    // Create railway track
+                    const trackGeometry = new THREE.BoxGeometry(2, 0.1, scene.userData.galleryLength);
+                    const trackMaterial = new THREE.MeshStandardMaterial({
+                        map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
+                        roughness: 0.7,
+                        metalness: 0.2,
+                        side: THREE.DoubleSide
+                    });
+                    const track = new THREE.Mesh(trackGeometry, trackMaterial);
+                    track.position.set(0, 0.05, 0);
+                    scene.add(track);
+                    trainSystem.track = track;
+
+                    // Create railway sleepers
+                    const sleeperGeometry = new THREE.BoxGeometry(4, 0.1, 0.4);
+                    const sleeperMaterial = new THREE.MeshStandardMaterial({
+                        map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
+                        roughness: 0.8,
+                        metalness: 0.2,
+                        side: THREE.DoubleSide
+                    });
+
+                    for (let z = -scene.userData.galleryLength/2 + 2; z < scene.userData.galleryLength/2 - 2; z += 2) {
+                        const sleeper = new THREE.Mesh(sleeperGeometry, sleeperMaterial);
+                        sleeper.position.set(0, 0.02, z);
+                        scene.add(sleeper);
+                    }
+
+                    // Create minecart train with 20 carts
+                    const cartSpacing = 2.5;  // Reduced spacing between carts
+                    for (let i = 0; i < 20; i++) {  // Changed from 10 to 20 carts
+                        const cart = createMinecart();
+                        cart.position.z = -scene.userData.galleryLength/2 + 5 + (i * cartSpacing);
+                        trainSystem.carts.push(cart);
+                        scene.add(cart);
+                    }
+
+                    // Update function for train movement with portal effect
+                    trainSystem.update = function() {
+                        const currentTime = performance.now();
+                        const deltaTime = (currentTime - trainSystem.lastTime) / 1000; // Convert to seconds
+                        trainSystem.lastTime = currentTime;
+
+                        trainSystem.carts.forEach((cart, index) => {
+                            // Move cart forward continuously with time-based movement
+                            cart.position.z += trainSystem.speed * deltaTime;
+
+                            // Handle portal transitions - keep everything inside
+                            const doorZone = 10; // Same as player controls
+                            if (cart.position.z > scene.userData.galleryLength/2 - doorZone) {
+                                // Teleport back to the other end
+                                cart.position.z = -scene.userData.galleryLength/2 + doorZone;
+                            } else if (cart.position.z < -scene.userData.galleryLength/2 + doorZone) {
+                                // Teleport to the other end if somehow going backwards
+                                cart.position.z = scene.userData.galleryLength/2 - doorZone;
+                            }
+
+                            // Rotate wheels continuously with time-based rotation
+                            cart.children.slice(3).forEach(wheel => {
+                                wheel.rotation.x += 2.0 * trainSystem.speed * deltaTime;  // Increased wheel rotation speed
+                            });
+
+                            // Update camera if riding this cart
+                            if (camera.userData.onTrain === cart) {
+                                camera.position.x = cart.position.x;
+                                camera.position.y = cart.position.y + 1.5;
+                                camera.position.z = cart.position.z;
+
+                                // Keep camera inside gallery with same door zone
+                                if (camera.position.z > scene.userData.galleryLength/2 - doorZone) {
+                                    camera.position.z = -scene.userData.galleryLength/2 + doorZone;
+                                } else if (camera.position.z < -scene.userData.galleryLength/2 + doorZone) {
+                                    camera.position.z = scene.userData.galleryLength/2 - doorZone;
+                                }
+                            }
+                        });
+                    };
+                }
+
+                function createMinecart() {
+                    const cartGroup = new THREE.Group();
+
+                    // Cart base
+                    const baseGeometry = new THREE.BoxGeometry(2, 0.5, 2);
+                    const baseMaterial = new THREE.MeshStandardMaterial({
+                        map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
+                        roughness: 0.8,
+                        metalness: 0.1,
+                        color: 0xD2B48C,  // Tan color - more beige than brown
+                        side: THREE.DoubleSide
+                    });
+                    baseMaterial.map.repeat.set(4, 4);  // Smaller wood pattern for the cart
+                    const base = new THREE.Mesh(baseGeometry, baseMaterial);
+                    base.position.y = 0.5;
+                    cartGroup.add(base);
+
+                    // Cart sides
+                    const sideGeometry = new THREE.BoxGeometry(0.1, 0.5, 2);
+                    const sideMaterial = new THREE.MeshStandardMaterial({
+                        map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
+                        roughness: 0.8,
+                        metalness: 0.1,
+                        color: 0xD2B48C,  // Tan color - more beige than brown
+                        side: THREE.DoubleSide
+                    });
+                    sideMaterial.map.repeat.set(4, 4);  // Smaller wood pattern for the sides
+
+                    const leftSide = new THREE.Mesh(sideGeometry, sideMaterial);
+                    leftSide.position.set(-0.95, 1, 0);
+                    cartGroup.add(leftSide);
+
+                    const rightSide = new THREE.Mesh(sideGeometry, sideMaterial);
+                    rightSide.position.set(0.95, 1, 0);
+                    cartGroup.add(rightSide);
+
+                    // Cart wheels
+                    const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16);
+                    const wheelMaterial = new THREE.MeshStandardMaterial({
+                        map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
+                        roughness: 0.8,
+                        metalness: 0.1,
+                        color: 0xBC8F8F,  // Rosy brown - lighter and less reddish
+                        side: THREE.DoubleSide
+                    });
+                    wheelMaterial.map.repeat.set(4, 4);  // Smaller wood pattern for the wheels
+                    
+                    const wheelPositions = [
+                        [-0.8, 0.3, -0.8],
+                        [0.8, 0.3, -0.8],
+                        [-0.8, 0.3, 0.8],
+                        [0.8, 0.3, 0.8]
+                    ];
+
+                    wheelPositions.forEach(pos => {
+                        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                        wheel.rotation.z = Math.PI / 2;
+                        wheel.position.set(...pos);
+                        wheel.name = 'wheel';
+                        cartGroup.add(wheel);
+                    });
+
+                    return cartGroup;
+                }
+                
+                // Modify the animate function to handle mobile controls
+                function animate() {
+                    requestAnimationFrame(animate);
+                    
+                    if (document.hidden) return;
+                    
+                    const time = performance.now();
+                    
+                    updateNPCs(time);
+                    trainSystem.update();
+                    
+                    // Update camera position if on train
+                    if (camera.userData.onTrain) {
+                        camera.position.z = camera.userData.onTrain.position.z;
+                    }
+                    
+                    // Update controls with mobile input
+                    galleryControls.update();
+                    checkArtworkFocus();
+                    
+                    renderer.render(scene, camera);
+                }
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+                
+                // Add train boarding event listener
+                document.addEventListener('keydown', (event) => {
+                    if (event.code === 'KeyE') {
+                        const playerPos = camera.position;
+                        let nearestCart = null;
+                        let shortestDistance = Infinity;
+
+                        trainSystem.carts.forEach(cart => {
+                            const cartPos = cart.position;
+                            const distance = Math.sqrt(
+                                Math.pow(playerPos.x - cartPos.x, 2) +
+                                Math.pow(playerPos.z - cartPos.z, 2)
+                            );
+
+                            if (distance < shortestDistance) {
+                                shortestDistance = distance;
+                                nearestCart = cart;
+                            }
+                        });
+
+                        if (shortestDistance < 3) {  // Increased interaction distance
+                            if (!camera.userData.onTrain) {
+                                // Board train
+                                camera.userData.onTrain = nearestCart;
+                                camera.position.x = nearestCart.position.x + 0.5;
+                                camera.position.y = nearestCart.position.y + 1.2;
+                                camera.position.z = nearestCart.position.z;
+                                artworkInfoElement.innerHTML = "<strong>Press E to exit train</strong>";
+                                artworkInfoElement.style.display = 'block';
+                            } else {
+                                // Exit train
+                                camera.userData.onTrain = null;
+                                camera.position.x = nearestCart.position.x + 2;
+                                artworkInfoElement.style.display = 'none';
+                            }
+                        }
+                    }
+                });
+                
+                // Start animation
+                animate();
+            }
+        } catch (error) {
+            console.error('Error initializing gallery:', error);
+            document.getElementById('scene-container').innerHTML = `
+                <div style="color: white; padding: 20px; text-align: center;">
+                    <h2>Error Loading Gallery</h2>
+                    <p>Please check the console for details.</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
