@@ -1,10 +1,9 @@
 import * as THREE from '../three/three.module.min.js';
 
 export class GalleryControls {
-    constructor(camera, scene, collisionWalls) {
+    constructor(camera, scene) {
         this.camera = camera;
         this.scene = scene;
-        this.collisionWalls = collisionWalls;
         this.moveSpeed = 0.1;
         this.lookSpeed = 0.002;
         this.moveVector = new THREE.Vector3();
@@ -15,7 +14,9 @@ export class GalleryControls {
         this.moveBackward = false;
         this.moveLeft = false;
         this.moveRight = false;
+        this.isSprinting = false;
         this.canMove = true;
+        this.prevTime = performance.now();
         
         // Event handling
         this.eventListeners = {
@@ -73,13 +74,13 @@ export class GalleryControls {
         const galleryWidth = this.scene.userData.galleryWidth;
         
         // Random position along the gallery, closer to a random artwork
-        const artworkSpacing = 8 * 5;  // Same spacing as in placeArtworks
-        const randomArtworkIndex = Math.floor(Math.random() * 19);  // 19 total artworks
+        const artworkSpacing = 8 * 5;
+        const randomArtworkIndex = Math.floor(Math.random() * 19);
         const randomZ = -galleryLength / 2 + 10 + (randomArtworkIndex % 9) * artworkSpacing;
         
         // Random side of the gallery (-1 for left, 1 for right)
         const side = Math.random() < 0.5 ? -1 : 1;
-        const x = (galleryWidth / 2 - 2) * side;  // Spawn 2 units from the wall
+        const x = (galleryWidth / 2 - 2) * side;
         
         // Set camera position
         this.camera.position.set(x, 1.7, randomZ);
@@ -98,35 +99,23 @@ export class GalleryControls {
 
         document.addEventListener('keydown', (event) => {
             switch (event.code) {
-                case 'KeyW':
-                    this.moveForward = true;
-                    break;
-                case 'KeyS':
-                    this.moveBackward = true;
-                    break;
-                case 'KeyA':
-                    this.moveLeft = true;
-                    break;
-                case 'KeyD':
-                    this.moveRight = true;
-                    break;
+                case 'KeyW': this.moveBackward = true; break;
+                case 'KeyS': this.moveForward = true; break;
+                case 'KeyA': this.moveRight = true; break;
+                case 'KeyD': this.moveLeft = true; break;
+                case 'ShiftLeft': 
+                case 'ShiftRight': this.isSprinting = true; break;
             }
         });
 
         document.addEventListener('keyup', (event) => {
             switch (event.code) {
-                case 'KeyW':
-                    this.moveForward = false;
-                    break;
-                case 'KeyS':
-                    this.moveBackward = false;
-                    break;
-                case 'KeyA':
-                    this.moveLeft = false;
-                    break;
-                case 'KeyD':
-                    this.moveRight = false;
-                    break;
+                case 'KeyW': this.moveBackward = false; break;
+                case 'KeyS': this.moveForward = false; break;
+                case 'KeyA': this.moveRight = false; break;
+                case 'KeyD': this.moveLeft = false; break;
+                case 'ShiftLeft': 
+                case 'ShiftRight': this.isSprinting = false; break;
             }
         });
 
@@ -149,69 +138,61 @@ export class GalleryControls {
     }
     
     update() {
-        if (this.isLocked) {
-            // Handle keyboard movement
-            this.vec.set(0, 0, 0);
-            if (this.moveForward) this.vec.z -= 1;
-            if (this.moveBackward) this.vec.z += 1;
-            if (this.moveLeft) this.vec.x -= 1;
-            if (this.moveRight) this.vec.x += 1;
+        if (!this.isLocked) return;
 
-            // Add mobile movement vector
-            this.vec.add(this.moveVector);
+        const time = performance.now();
+        const deltaTime = (time - this.prevTime) / 1000;
+        this.prevTime = time;
 
-            // Apply movement
-            if (this.vec.length() > 0) {
-                this.vec.normalize();
-                this.vec.applyQuaternion(this.camera.quaternion);
-                this.vec.y = 0; // Keep movement horizontal
-                this.vec.multiplyScalar(this.moveSpeed);
+        // Calculate movement vector based on key inputs
+        this.moveVector.x = 0;
+        this.moveVector.z = 0;
 
-                const newPosition = this.camera.position.clone().add(this.vec);
-                
-                // Check if player is at either door (with a larger detection zone)
-                const doorZone = 10; // Increased detection zone
-                if (newPosition.z > this.scene.userData.galleryLength/2 - doorZone) {
-                    // Teleport to back door
-                    this.camera.position.z = -this.scene.userData.galleryLength/2 + doorZone;
-                    console.log('Teleporting to back door'); // Debug log
-                } else if (newPosition.z < -this.scene.userData.galleryLength/2 + doorZone) {
-                    // Teleport to front door
-                    this.camera.position.z = this.scene.userData.galleryLength/2 - doorZone;
-                    console.log('Teleporting to front door'); // Debug log
-                } else if (!this.checkCollisions(newPosition)) {
-                    this.camera.position.copy(newPosition);
-                }
-            }
+        if (this.moveForward) this.moveVector.z = -1;
+        if (this.moveBackward) this.moveVector.z = 1;
+        if (this.moveLeft) this.moveVector.x = -1;
+        if (this.moveRight) this.moveVector.x = 1;
+
+        // Normalize the vector if moving diagonally
+        if (this.moveVector.length() > 1) {
+            this.moveVector.normalize();
         }
-    }
-    
-    checkCollisions(position) {
-        const playerSize = 0.5;
-        const playerHeight = 1.8;
-        
-        const playerMin = new THREE.Vector3(
-            position.x - playerSize,
-            position.y,
-            position.z - playerSize
-        );
-        
-        const playerMax = new THREE.Vector3(
-            position.x + playerSize,
-            position.y + playerHeight,
-            position.z + playerSize
-        );
-        
-        for (const wall of this.collisionWalls) {
-            if (
-                playerMax.x > wall.min.x && playerMin.x < wall.max.x &&
-                playerMax.y > wall.min.y && playerMin.y < wall.max.y &&
-                playerMax.z > wall.min.z && playerMin.z < wall.max.z
-            ) {
-                return true;
-            }
+
+        // Calculate new position
+        const newPosition = this.camera.position.clone();
+        const baseSpeed = 5.0;
+        const sprintMultiplier = this.isSprinting ? 10.0 : 1.0;
+        const moveSpeed = baseSpeed * sprintMultiplier;
+        const moveAmount = moveSpeed * deltaTime;
+
+        // Get camera's forward and right vectors
+        const forward = new THREE.Vector3();
+        this.camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
+
+        const right = new THREE.Vector3();
+        right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
+
+        // Apply movement based on input
+        if (this.moveVector.length() > 0) {
+            const moveDirection = new THREE.Vector3();
+            moveDirection.addScaledVector(forward, this.moveVector.z);
+            moveDirection.addScaledVector(right, this.moveVector.x);
+            moveDirection.normalize();
+            newPosition.addScaledVector(moveDirection, moveAmount);
         }
-        
-        return false;
+
+        // Simple boundary check based on floor size
+        const galleryWidth = this.scene.userData.galleryWidth;
+        const galleryLength = this.scene.userData.galleryLength;
+        const margin = 1; // Keep player away from walls
+
+        // Clamp position to gallery boundaries
+        newPosition.x = Math.max(-galleryWidth/2 + margin, Math.min(galleryWidth/2 - margin, newPosition.x));
+        newPosition.z = Math.max(-galleryLength/2 + margin, Math.min(galleryLength/2 - margin, newPosition.z));
+
+        // Update camera position
+        this.camera.position.copy(newPosition);
     }
 }

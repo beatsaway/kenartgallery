@@ -278,44 +278,8 @@ Press E near train to board/exit</div>
             renderer.shadowMap.type = THREE.PCFShadowMap;
             document.getElementById('scene-container').appendChild(renderer.domElement);
             
-            // Collision detection boundaries
-            const collisionWalls = [];
-            
-            function setupCollisions() {
-                // Create invisible collision walls (slightly inside the visible walls)
-                const offsetFromWall = 0.5;  // Keep player collision radius the same
-                const doorZone = 10;  // Same as teleportation zone
-                
-                // Left wall collision
-                collisionWalls.push({
-                    min: new THREE.Vector3(-scene.userData.galleryWidth / 2 + offsetFromWall, 0, -scene.userData.galleryLength / 2),
-                    max: new THREE.Vector3(-scene.userData.galleryWidth / 2 + offsetFromWall, scene.userData.galleryHeight, scene.userData.galleryLength / 2)
-                });
-                
-                // Right wall collision
-                collisionWalls.push({
-                    min: new THREE.Vector3(scene.userData.galleryWidth / 2 - offsetFromWall, 0, -scene.userData.galleryLength / 2),
-                    max: new THREE.Vector3(scene.userData.galleryWidth / 2 - offsetFromWall, scene.userData.galleryHeight, scene.userData.galleryLength / 2)
-                });
-                
-                // Back wall collision (solid)
-                collisionWalls.push({
-                    min: new THREE.Vector3(-scene.userData.galleryWidth / 2, 0, -scene.userData.galleryLength / 2 + offsetFromWall),
-                    max: new THREE.Vector3(scene.userData.galleryWidth / 2, scene.userData.galleryHeight, -scene.userData.galleryLength / 2 + doorZone)
-                });
-                
-                // Front wall collision (solid)
-                collisionWalls.push({
-                    min: new THREE.Vector3(-scene.userData.galleryWidth / 2, 0, scene.userData.galleryLength / 2 - doorZone),
-                    max: new THREE.Vector3(scene.userData.galleryWidth / 2, scene.userData.galleryHeight, scene.userData.galleryLength / 2 - offsetFromWall)
-                });
-            }
-            
-            // Set up collision objects
-            setupCollisions();
-            
             // Movement and controls
-            const controls = new GalleryControls(camera, scene, collisionWalls);
+            const controls = new GalleryControls(camera, scene);
             controls.setupEventListeners();
             
             const velocity = new THREE.Vector3();
@@ -327,10 +291,9 @@ Press E near train to board/exit</div>
             const trainSystem = {
                 carts: [],
                 track: null,
-                speed: 100.0,  // Increased significantly for much faster movement
+                speed: 0.1,  // Reduced from 0.2 to 0.1 (2 times slower)
                 direction: 1,
-                currentPosition: 0,
-                lastTime: 0
+                currentPosition: 0
             };
             
             // Current artwork display element
@@ -675,14 +638,14 @@ Press E near train to board/exit</div>
                     side: THREE.DoubleSide
                 });
 
-                // Create back wall (solid)
+                // Create back wall
                 const backWall = new THREE.Mesh(
                     new THREE.PlaneGeometry(scene.userData.galleryWidth, scene.userData.galleryHeight),
                     wallMaterial
                 );
                 backWall.position.set(0, scene.userData.galleryHeight/2, -scene.userData.galleryLength/2);
                 backWall.receiveShadow = true;
-                backWall.material.map.repeat.set(40, 40);  // 5x smaller pattern
+                backWall.material.map.repeat.set(40, 40);
                 scene.add(backWall);
 
                 // Create side walls
@@ -694,7 +657,7 @@ Press E near train to board/exit</div>
                 leftWall.position.y = scene.userData.galleryHeight/2;
                 leftWall.rotation.y = Math.PI/2;
                 leftWall.receiveShadow = true;
-                leftWall.material.map.repeat.set(40, 40);  // 5x smaller pattern
+                leftWall.material.map.repeat.set(40, 40);
                 scene.add(leftWall);
 
                 const rightWall = new THREE.Mesh(
@@ -705,17 +668,17 @@ Press E near train to board/exit</div>
                 rightWall.position.y = scene.userData.galleryHeight/2;
                 rightWall.rotation.y = -Math.PI/2;
                 rightWall.receiveShadow = true;
-                rightWall.material.map.repeat.set(40, 40);  // 5x smaller pattern
+                rightWall.material.map.repeat.set(40, 40);
                 scene.add(rightWall);
 
-                // Create front wall (solid)
+                // Create front wall
                 const frontWall = new THREE.Mesh(
                     new THREE.PlaneGeometry(scene.userData.galleryWidth, scene.userData.galleryHeight),
                     wallMaterial
                 );
                 frontWall.position.set(0, scene.userData.galleryHeight/2, scene.userData.galleryLength/2);
                 frontWall.receiveShadow = true;
-                frontWall.material.map.repeat.set(40, 40);  // 5x smaller pattern
+                frontWall.material.map.repeat.set(40, 40);
                 scene.add(frontWall);
             }
             
@@ -911,6 +874,142 @@ Press E near train to board/exit</div>
                 scene.add(hemisphereLight);
             }
             
+            // Add train and railway system
+            function createRailwaySystem() {
+                // Create railway track
+                const trackGeometry = new THREE.BoxGeometry(2, 0.1, scene.userData.galleryLength);
+                const trackMaterial = new THREE.MeshStandardMaterial({
+                    map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
+                    roughness: 0.7,
+                    metalness: 0.2,
+                    side: THREE.DoubleSide
+                });
+                const track = new THREE.Mesh(trackGeometry, trackMaterial);
+                track.position.set(0, 0.05, 0);
+                scene.add(track);
+                trainSystem.track = track;
+
+                // Create railway sleepers
+                const sleeperGeometry = new THREE.BoxGeometry(4, 0.1, 0.4);
+                const sleeperMaterial = new THREE.MeshStandardMaterial({
+                    map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
+                    roughness: 0.8,
+                    metalness: 0.2,
+                    side: THREE.DoubleSide
+                });
+
+                for (let z = -scene.userData.galleryLength/2 + 2; z < scene.userData.galleryLength/2 - 2; z += 2) {
+                    const sleeper = new THREE.Mesh(sleeperGeometry, sleeperMaterial);
+                    sleeper.position.set(0, 0.02, z);
+                    scene.add(sleeper);
+                }
+
+                // Create minecart train with 20 carts
+                const cartSpacing = 2.5;  // Reduced spacing between carts
+                for (let i = 0; i < 20; i++) {  // Changed from 10 to 20 carts
+                    const cart = createMinecart();
+                    cart.position.z = -scene.userData.galleryLength/2 + 5 + (i * cartSpacing);
+                    trainSystem.carts.push(cart);
+                    scene.add(cart);
+                }
+
+                // Update function for train movement
+                trainSystem.update = function() {
+                    trainSystem.carts.forEach((cart, index) => {
+                        // Move cart forward continuously
+                        cart.position.z += trainSystem.speed;
+
+                        // Implement room wrapping for train
+                        const galleryLength = scene.userData.galleryLength;
+                        const margin = 1; // Small margin to prevent getting stuck at edges
+
+                        // Wrap Z position
+                        if (cart.position.z > galleryLength/2 + margin) {
+                            cart.position.z = -galleryLength/2 - margin;
+                        } else if (cart.position.z < -galleryLength/2 - margin) {
+                            cart.position.z = galleryLength/2 + margin;
+                        }
+
+                        // Rotate wheels continuously
+                        cart.children.slice(3).forEach(wheel => {
+                            wheel.rotation.x += 0.1 * trainSystem.speed;  // Simple wheel rotation
+                        });
+
+                        // Update camera if riding this cart
+                        if (camera.userData.onTrain === cart) {
+                            camera.position.x = cart.position.x;
+                            camera.position.y = cart.position.y + 1.5;
+                            camera.position.z = cart.position.z;
+                        }
+                    });
+                };
+            }
+
+            function createMinecart() {
+                const cartGroup = new THREE.Group();
+
+                // Cart base
+                const baseGeometry = new THREE.BoxGeometry(2, 0.5, 2);
+                const baseMaterial = new THREE.MeshStandardMaterial({
+                    map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
+                    roughness: 0.8,
+                    metalness: 0.1,
+                    color: 0xD2B48C,  // Tan color - more beige than brown
+                    side: THREE.DoubleSide
+                });
+                baseMaterial.map.repeat.set(4, 4);  // Smaller wood pattern for the cart
+                const base = new THREE.Mesh(baseGeometry, baseMaterial);
+                base.position.y = 0.5;
+                cartGroup.add(base);
+
+                // Cart sides
+                const sideGeometry = new THREE.BoxGeometry(0.1, 0.5, 2);
+                const sideMaterial = new THREE.MeshStandardMaterial({
+                    map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
+                    roughness: 0.8,
+                    metalness: 0.1,
+                    color: 0xD2B48C,  // Tan color - more beige than brown
+                    side: THREE.DoubleSide
+                });
+                sideMaterial.map.repeat.set(4, 4);  // Smaller wood pattern for the sides
+
+                const leftSide = new THREE.Mesh(sideGeometry, sideMaterial);
+                leftSide.position.set(-0.95, 1, 0);
+                cartGroup.add(leftSide);
+
+                const rightSide = new THREE.Mesh(sideGeometry, sideMaterial);
+                rightSide.position.set(0.95, 1, 0);
+                cartGroup.add(rightSide);
+
+                // Cart wheels
+                const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16);
+                const wheelMaterial = new THREE.MeshStandardMaterial({
+                    map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
+                    roughness: 0.8,
+                    metalness: 0.1,
+                    color: 0xBC8F8F,  // Rosy brown - lighter and less reddish
+                    side: THREE.DoubleSide
+                });
+                wheelMaterial.map.repeat.set(4, 4);  // Smaller wood pattern for the wheels
+                
+                const wheelPositions = [
+                    [-0.8, 0.3, -0.8],
+                    [0.8, 0.3, -0.8],
+                    [-0.8, 0.3, 0.8],
+                    [0.8, 0.3, 0.8]
+                ];
+
+                wheelPositions.forEach(pos => {
+                    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                    wheel.rotation.z = Math.PI / 2;
+                    wheel.position.set(...pos);
+                    wheel.name = 'wheel';
+                    cartGroup.add(wheel);
+                });
+
+                return cartGroup;
+            }
+            
             function checkCollisions(position) {
                 // Create a box representing the player
                 const playerSize = 0.5;  // Half-width of player
@@ -967,7 +1066,7 @@ Press E near train to board/exit</div>
 
             // Initialize gallery, controls, and set random position
             createGallery();
-            const galleryControls = new GalleryControls(camera, scene, collisionWalls);
+            const galleryControls = new GalleryControls(camera, scene);
             setRandomInitialPosition();
 
             // Initialize mobile controls
@@ -1205,63 +1304,6 @@ Press E near train to board/exit</div>
                     cameraStartRotation = null;
                 });
 
-                // Handle joystick movement without affecting camera
-                function handleTouchMove(event) {
-                    if (!isDragging) return;
-                    event.preventDefault();
-
-                    const touch = event.touches[0];
-                    const rect = joystickContainer.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-
-                    currentX = touch.clientX - centerX;
-                    currentY = touch.clientY - centerY;
-
-                    // Calculate distance from center
-                    const distance = Math.sqrt(currentX * currentX + currentY * currentY);
-                    const maxDistance = rect.width / 2 - 15; // Half of container minus half of dot
-
-                    // Limit joystick movement to circle
-                    if (distance > maxDistance) {
-                        const angle = Math.atan2(currentY, currentX);
-                        currentX = Math.cos(angle) * maxDistance;
-                        currentY = Math.sin(angle) * maxDistance;
-                    }
-
-                    // Update joystick dot position
-                    joystickDot.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
-
-                    // Calculate direction vector
-                    const vector = {
-                        x: currentX / maxDistance,
-                        y: currentY / maxDistance
-                    };
-
-                    // Update direction indicators
-                    const dots = joystickContainer.children;
-                    dots[1].style.opacity = vector.y < -0.5 ? '1' : '0.5';  // W (Up)
-                    dots[2].style.opacity = vector.x < -0.5 ? '1' : '0.5';  // A (Left)
-                    dots[3].style.opacity = vector.y > 0.5 ? '1' : '0.5';   // S (Down)
-                    dots[4].style.opacity = vector.x > 0.5 ? '1' : '0.5';   // D (Right)
-
-                    // Update movement vector without affecting camera rotation
-                    const forward = new THREE.Vector3();
-                    camera.getWorldDirection(forward);
-                    forward.y = 0;
-                    forward.normalize();
-
-                    const right = new THREE.Vector3();
-                    right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
-
-                    const moveDirection = new THREE.Vector3();
-                    moveDirection.addScaledVector(forward, -vector.y);
-                    moveDirection.addScaledVector(right, vector.x);
-                    moveDirection.normalize();
-
-                    galleryControls.moveVector.copy(moveDirection);
-                }
-
                 // Remove auto-hide timers and modify click behavior
                 const welcomePopup = document.getElementById('welcome-popup');
                 const sceneContainer = document.getElementById('scene-container');
@@ -1361,162 +1403,27 @@ Press E near train to board/exit</div>
                     }
                 }
                 
-                // Add train and railway system
-                function createRailwaySystem() {
-                    // Create railway track
-                    const trackGeometry = new THREE.BoxGeometry(2, 0.1, scene.userData.galleryLength);
-                    const trackMaterial = new THREE.MeshStandardMaterial({
-                        map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
-                        roughness: 0.7,
-                        metalness: 0.2,
-                        side: THREE.DoubleSide
-                    });
-                    const track = new THREE.Mesh(trackGeometry, trackMaterial);
-                    track.position.set(0, 0.05, 0);
-                    scene.add(track);
-                    trainSystem.track = track;
-
-                    // Create railway sleepers
-                    const sleeperGeometry = new THREE.BoxGeometry(4, 0.1, 0.4);
-                    const sleeperMaterial = new THREE.MeshStandardMaterial({
-                        map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
-                        roughness: 0.8,
-                        metalness: 0.2,
-                        side: THREE.DoubleSide
-                    });
-
-                    for (let z = -scene.userData.galleryLength/2 + 2; z < scene.userData.galleryLength/2 - 2; z += 2) {
-                        const sleeper = new THREE.Mesh(sleeperGeometry, sleeperMaterial);
-                        sleeper.position.set(0, 0.02, z);
-                        scene.add(sleeper);
-                    }
-
-                    // Create minecart train with 20 carts
-                    const cartSpacing = 2.5;  // Reduced spacing between carts
-                    for (let i = 0; i < 20; i++) {  // Changed from 10 to 20 carts
-                        const cart = createMinecart();
-                        cart.position.z = -scene.userData.galleryLength/2 + 5 + (i * cartSpacing);
-                        trainSystem.carts.push(cart);
-                        scene.add(cart);
-                    }
-
-                    // Update function for train movement with portal effect
-                    trainSystem.update = function() {
-                        const currentTime = performance.now();
-                        const deltaTime = (currentTime - trainSystem.lastTime) / 1000; // Convert to seconds
-                        trainSystem.lastTime = currentTime;
-
-                        trainSystem.carts.forEach((cart, index) => {
-                            // Move cart forward continuously with time-based movement
-                            cart.position.z += trainSystem.speed * deltaTime;
-
-                            // Handle portal transitions - keep everything inside
-                            const doorZone = 10; // Same as player controls
-                            if (cart.position.z > scene.userData.galleryLength/2 - doorZone) {
-                                // Teleport back to the other end
-                                cart.position.z = -scene.userData.galleryLength/2 + doorZone;
-                            } else if (cart.position.z < -scene.userData.galleryLength/2 + doorZone) {
-                                // Teleport to the other end if somehow going backwards
-                                cart.position.z = scene.userData.galleryLength/2 - doorZone;
-                            }
-
-                            // Rotate wheels continuously with time-based rotation
-                            cart.children.slice(3).forEach(wheel => {
-                                wheel.rotation.x += 2.0 * trainSystem.speed * deltaTime;  // Increased wheel rotation speed
-                            });
-
-                            // Update camera if riding this cart
-                            if (camera.userData.onTrain === cart) {
-                                camera.position.x = cart.position.x;
-                                camera.position.y = cart.position.y + 1.5;
-                                camera.position.z = cart.position.z;
-
-                                // Keep camera inside gallery with same door zone
-                                if (camera.position.z > scene.userData.galleryLength/2 - doorZone) {
-                                    camera.position.z = -scene.userData.galleryLength/2 + doorZone;
-                                } else if (camera.position.z < -scene.userData.galleryLength/2 + doorZone) {
-                                    camera.position.z = scene.userData.galleryLength/2 - doorZone;
-                                }
-                            }
-                        });
-                    };
-                }
-
-                function createMinecart() {
-                    const cartGroup = new THREE.Group();
-
-                    // Cart base
-                    const baseGeometry = new THREE.BoxGeometry(2, 0.5, 2);
-                    const baseMaterial = new THREE.MeshStandardMaterial({
-                        map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
-                        roughness: 0.8,
-                        metalness: 0.1,
-                        color: 0xD2B48C,  // Tan color - more beige than brown
-                        side: THREE.DoubleSide
-                    });
-                    baseMaterial.map.repeat.set(4, 4);  // Smaller wood pattern for the cart
-                    const base = new THREE.Mesh(baseGeometry, baseMaterial);
-                    base.position.y = 0.5;
-                    cartGroup.add(base);
-
-                    // Cart sides
-                    const sideGeometry = new THREE.BoxGeometry(0.1, 0.5, 2);
-                    const sideMaterial = new THREE.MeshStandardMaterial({
-                        map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
-                        roughness: 0.8,
-                        metalness: 0.1,
-                        color: 0xD2B48C,  // Tan color - more beige than brown
-                        side: THREE.DoubleSide
-                    });
-                    sideMaterial.map.repeat.set(4, 4);  // Smaller wood pattern for the sides
-
-                    const leftSide = new THREE.Mesh(sideGeometry, sideMaterial);
-                    leftSide.position.set(-0.95, 1, 0);
-                    cartGroup.add(leftSide);
-
-                    const rightSide = new THREE.Mesh(sideGeometry, sideMaterial);
-                    rightSide.position.set(0.95, 1, 0);
-                    cartGroup.add(rightSide);
-
-                    // Cart wheels
-                    const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16);
-                    const wheelMaterial = new THREE.MeshStandardMaterial({
-                        map: textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg'),
-                        roughness: 0.8,
-                        metalness: 0.1,
-                        color: 0xBC8F8F,  // Rosy brown - lighter and less reddish
-                        side: THREE.DoubleSide
-                    });
-                    wheelMaterial.map.repeat.set(4, 4);  // Smaller wood pattern for the wheels
-                    
-                    const wheelPositions = [
-                        [-0.8, 0.3, -0.8],
-                        [0.8, 0.3, -0.8],
-                        [-0.8, 0.3, 0.8],
-                        [0.8, 0.3, 0.8]
-                    ];
-
-                    wheelPositions.forEach(pos => {
-                        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-                        wheel.rotation.z = Math.PI / 2;
-                        wheel.position.set(...pos);
-                        wheel.name = 'wheel';
-                        cartGroup.add(wheel);
-                    });
-
-                    return cartGroup;
-                }
-                
                 // Modify the animate function to handle mobile controls
                 function animate() {
                     requestAnimationFrame(animate);
                     
+                    // Skip update if tab is hidden
                     if (document.hidden) return;
                     
                     const time = performance.now();
                     
-                    updateNPCs(time);
-                    trainSystem.update();
+                    // Only update NPCs and train if they exist and are visible
+                    if (scene.userData.npcs && scene.userData.npcs.length > 0) {
+                        // Only update NPCs every other frame to reduce load
+                        if (time % 2 === 0) {
+                            updateNPCs(time);
+                        }
+                    }
+                    
+                    // Update train system
+                    if (trainSystem) {
+                        trainSystem.update();
+                    }
                     
                     // Update camera position if on train
                     if (camera.userData.onTrain) {
@@ -1525,7 +1432,11 @@ Press E near train to board/exit</div>
                     
                     // Update controls with mobile input
                     galleryControls.update();
-                    checkArtworkFocus();
+                    
+                    // Only check artwork focus if we're not on the train and every other frame
+                    if (!camera.userData.onTrain && time % 2 === 0) {
+                        checkArtworkFocus();
+                    }
                     
                     renderer.render(scene, camera);
                 }
