@@ -1162,12 +1162,12 @@ Press E near train to board/exit</div>
                     document.body.appendChild(joystickContainer);
 
                     // Add touch event listeners
-                    joystickContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
-                    joystickContainer.addEventListener('touchmove', handleJoystickMove, { passive: false });
-                    joystickContainer.addEventListener('touchend', handleTouchEnd);
+                    joystickContainer.addEventListener('touchstart', handleJoystickTouchStart, { passive: true });
+                    joystickContainer.addEventListener('touchmove', handleJoystickTouchMove, { passive: false });
+                    joystickContainer.addEventListener('touchend', handleJoystickTouchEnd);
                 }
 
-                function handleTouchStart(event) {
+                function handleJoystickTouchStart(event) {
                     const touch = event.touches[0];
                     const rect = joystickContainer.getBoundingClientRect();
                     const centerX = rect.left + rect.width / 2;
@@ -1178,7 +1178,7 @@ Press E near train to board/exit</div>
                     isDragging = true;
                 }
 
-                function handleJoystickMove(event) {
+                function handleJoystickTouchMove(event) {
                     if (!isDragging) return;
                     event.preventDefault();
 
@@ -1234,17 +1234,19 @@ Press E near train to board/exit</div>
                     galleryControls.moveVector.copy(moveDirection);
                 }
 
-                function handleTouchEnd() {
+                function handleJoystickTouchEnd() {
                     isDragging = false;
-                    // Reset joystick position
+                    currentX = 0;
+                    currentY = 0;
                     joystickDot.style.transform = 'translate(-50%, -50%)';
-                    // Reset movement
                     galleryControls.moveVector.set(0, 0, 0);
+                    
                     // Reset direction indicators
                     const dots = joystickContainer.children;
-                    Array.from(dots).slice(1).forEach(dot => {
-                        dot.style.opacity = '0.5';
-                    });
+                    dots[1].style.opacity = '0.5';  // W (Up)
+                    dots[2].style.opacity = '0.5';  // A (Left)
+                    dots[3].style.opacity = '0.5';  // S (Down)
+                    dots[4].style.opacity = '0.5';  // D (Right)
                 }
 
                 // Create initial joystick UI
