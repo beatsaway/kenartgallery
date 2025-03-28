@@ -1163,7 +1163,7 @@ Press E near train to board/exit</div>
 
                     // Add touch event listeners
                     joystickContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
-                    joystickContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+                    joystickContainer.addEventListener('touchmove', handleJoystickMove, { passive: false });
                     joystickContainer.addEventListener('touchend', handleTouchEnd);
                 }
 
@@ -1178,7 +1178,7 @@ Press E near train to board/exit</div>
                     isDragging = true;
                 }
 
-                function handleTouchMove(event) {
+                function handleJoystickMove(event) {
                     if (!isDragging) return;
                     event.preventDefault();
 
