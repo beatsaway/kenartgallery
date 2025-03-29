@@ -1371,7 +1371,14 @@
                         let nearestCart = null;
                         let shortestDistance = Infinity;
 
+                        // Check if train system and carts exist
+                        if (!trainSystem || !trainSystem.carts || trainSystem.carts.length === 0) {
+                            return;
+                        }
+
                         trainSystem.carts.forEach(cart => {
+                            if (!cart) return;
+                            
                             const cartPos = cart.position;
                             const distance = Math.sqrt(
                                 Math.pow(playerPos.x - cartPos.x, 2) +
@@ -1384,20 +1391,24 @@
                             }
                         });
 
-                        if (shortestDistance < 3) {  // Increased interaction distance
+                        if (shortestDistance < 3 && nearestCart) {  // Check if nearestCart exists
                             if (!camera.userData.onTrain) {
                                 // Board train
                                 camera.userData.onTrain = nearestCart;
                                 camera.position.x = nearestCart.position.x + 0.5;
                                 camera.position.y = nearestCart.position.y + 1.2;
                                 camera.position.z = nearestCart.position.z;
-                                artworkInfoElement.innerHTML = "<strong>Press E to exit train</strong>";
-                                artworkInfoElement.style.display = 'block';
+                                if (artworkInfoElement) {
+                                    artworkInfoElement.innerHTML = "<strong>Press E to exit train</strong>";
+                                    artworkInfoElement.style.display = 'block';
+                                }
                             } else {
                                 // Exit train
                                 camera.userData.onTrain = null;
                                 camera.position.x = nearestCart.position.x + 2;
-                                artworkInfoElement.style.display = 'none';
+                                if (artworkInfoElement) {
+                                    artworkInfoElement.style.display = 'none';
+                                }
                             }
                         }
                     }
