@@ -628,39 +628,40 @@
                         newPosition.x += npc.userData.direction.x * npc.userData.speed * 0.02;
                         newPosition.z += npc.userData.direction.z * npc.userData.speed * 0.02;
                         
-                        // Boundary checks and collision avoidance
+                        // Boundary checks using gallery dimensions
                         const margin = 1;
-                        if (newPosition.x < -scene.userData.galleryWidth/2 + margin || newPosition.x > scene.userData.galleryWidth/2 - margin) {
-                            npc.userData.direction.x *= -1;
-                        } else if (newPosition.z < -scene.userData.galleryLength/2 + margin || newPosition.z > scene.userData.galleryLength/2 - margin) {
-                            npc.userData.direction.z *= -1;
-                        } else if (!checkCollisions(newPosition)) {
-                            npc.position.copy(newPosition);
-                            // Rotate NPC to face movement direction
-                            npc.rotation.y = Math.atan2(npc.userData.direction.x, npc.userData.direction.z);
-                            
-                            // Apply walking style
-                            const style = npc.userData.walkStyle;
-                            npc.userData.walkCycle += style.frequency * 0.1;
-                            
-                            // Leg animation with unique style
-                            const leftLeg = npc.children[4];
-                            const rightLeg = npc.children[5];
-                            leftLeg.rotation.x = Math.sin(npc.userData.walkCycle) * style.legAmplitude;
-                            rightLeg.rotation.x = Math.sin(npc.userData.walkCycle + Math.PI) * style.legAmplitude;
-                            
-                            // Arm animation with unique style
-                            const leftArm = npc.children[2];
-                            const rightArm = npc.children[3];
-                            leftArm.rotation.x = Math.sin(npc.userData.walkCycle + Math.PI) * style.armAmplitude;
-                            rightArm.rotation.x = Math.sin(npc.userData.walkCycle) * style.armAmplitude;
-                            
-                            // Body and head movement
-                            const body = npc.children[1];
-                            const head = npc.children[0];
-                            body.rotation.z = Math.sin(npc.userData.walkCycle * 2) * style.swayAmount + style.bodyTilt;
-                            head.rotation.x = Math.sin(npc.userData.walkCycle * 2) * style.headBob;
-                        }
+                        const maxX = scene.userData.galleryWidth/2 - margin;
+                        const maxZ = scene.userData.galleryLength/2 - margin;
+                        
+                        // Clamp position to gallery boundaries
+                        newPosition.x = Math.max(-maxX, Math.min(maxX, newPosition.x));
+                        newPosition.z = Math.max(-maxZ, Math.min(maxZ, newPosition.z));
+                        
+                        // Update position and rotation
+                        npc.position.copy(newPosition);
+                        npc.rotation.y = Math.atan2(npc.userData.direction.x, npc.userData.direction.z);
+                        
+                        // Apply walking style
+                        const style = npc.userData.walkStyle;
+                        npc.userData.walkCycle += style.frequency * 0.1;
+                        
+                        // Leg animation with unique style
+                        const leftLeg = npc.children[4];
+                        const rightLeg = npc.children[5];
+                        leftLeg.rotation.x = Math.sin(npc.userData.walkCycle) * style.legAmplitude;
+                        rightLeg.rotation.x = Math.sin(npc.userData.walkCycle + Math.PI) * style.legAmplitude;
+                        
+                        // Arm animation with unique style
+                        const leftArm = npc.children[2];
+                        const rightArm = npc.children[3];
+                        leftArm.rotation.x = Math.sin(npc.userData.walkCycle + Math.PI) * style.armAmplitude;
+                        rightArm.rotation.x = Math.sin(npc.userData.walkCycle) * style.armAmplitude;
+                        
+                        // Body and head movement
+                        const body = npc.children[1];
+                        const head = npc.children[0];
+                        body.rotation.z = Math.sin(npc.userData.walkCycle * 2) * style.swayAmount + style.bodyTilt;
+                        head.rotation.x = Math.sin(npc.userData.walkCycle * 2) * style.headBob;
                     } else {
                         // Reset animations while paused
                         npc.children.forEach(part => part.rotation.set(0, 0, 0));
@@ -1399,15 +1400,15 @@
                                 camera.position.y = nearestCart.position.y + 1.2;
                                 camera.position.z = nearestCart.position.z;
                                 if (artworkInfoElement) {
-                                    artworkInfoElement.innerHTML = "<strong>Press E to exit train</strong>";
-                                    artworkInfoElement.style.display = 'block';
+                                artworkInfoElement.innerHTML = "<strong>Press E to exit train</strong>";
+                                artworkInfoElement.style.display = 'block';
                                 }
                             } else {
                                 // Exit train
                                 camera.userData.onTrain = null;
                                 camera.position.x = nearestCart.position.x + 2;
                                 if (artworkInfoElement) {
-                                    artworkInfoElement.style.display = 'none';
+                                artworkInfoElement.style.display = 'none';
                                 }
                             }
                         }
@@ -1438,14 +1439,8 @@
                 frameCount++;
                 updateFPS();
                 
-                // Only update NPCs and train if they exist and are visible
-                if (scene.userData.npcs && scene.userData.npcs.length > 0) {
-                    // Reduce update frequency on mobile devices
-                    const updateInterval = isMobile ? 3 : 2;
-                    if (time % updateInterval === 0) {
-                        updateNPCs(time);
-                    }
-                }
+                // Update NPCs
+                updateNPCs(time);
                 
                 // Update train system with reduced frequency on mobile
                 if (trainSystem) {
