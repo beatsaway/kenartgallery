@@ -98,27 +98,31 @@ export class GalleryControls {
         });
 
         document.addEventListener('keydown', (event) => {
+            if (!this.isLocked) return;
+            
             switch (event.code) {
                 case 'KeyW': this.moveBackward = true; break;
                 case 'KeyS': this.moveForward = true; break;
                 case 'KeyA': this.moveRight = true; break;
                 case 'KeyD': this.moveLeft = true; break;
-                case 'ShiftLeft': 
+                case 'ShiftLeft':
                 case 'ShiftRight': this.isSprinting = true; break;
             }
         });
-
+        
         document.addEventListener('keyup', (event) => {
+            if (!this.isLocked) return;
+            
             switch (event.code) {
                 case 'KeyW': this.moveBackward = false; break;
                 case 'KeyS': this.moveForward = false; break;
                 case 'KeyA': this.moveRight = false; break;
                 case 'KeyD': this.moveLeft = false; break;
-                case 'ShiftLeft': 
+                case 'ShiftLeft':
                 case 'ShiftRight': this.isSprinting = false; break;
             }
         });
-
+        
         document.addEventListener('mousemove', (event) => {
             if (this.isLocked) {
                 this.euler.setFromQuaternion(this.camera.quaternion);
@@ -126,6 +130,13 @@ export class GalleryControls {
                 this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, 
                     this.euler.x - event.movementY * this.lookSpeed));
                 this.camera.quaternion.setFromEuler(this.euler);
+            }
+        });
+        
+        document.addEventListener('pointerlockchange', () => {
+            this.isLocked = document.pointerLockElement !== null;
+            if (!this.isLocked) {
+                this.unlock();
             }
         });
         
@@ -160,8 +171,8 @@ export class GalleryControls {
 
         // Calculate new position
         const newPosition = this.camera.position.clone();
-        const baseSpeed = 5.0;
-        const sprintMultiplier = this.isSprinting ? 10.0 : 1.0;
+        const baseSpeed = 10.0;
+        const sprintMultiplier = this.isSprinting ? 2.0 : 1.0;
         const moveSpeed = baseSpeed * sprintMultiplier;
         const moveAmount = moveSpeed * deltaTime;
 

@@ -19,4 +19,22 @@ export const artworkDescriptions = [
     "**Between Worlds**\nThese forms exist between planning and chance—in that fertile in-between space where preparation meets opportunity and magic happens.",
     "**Mind Liberation**\nRepeating the same mark frees your conscious mind from the physical action. This desensitization unlocks flow state—showing how repetition isn't boring but can be the doorway to creative freedom.",
     "**Beyond Self**\nThis artwork isn't about expressing personality but capturing universal process. What becomes possible when we create from beyond our ego boundaries?"
-]; 
+];
+
+// Function to parse artwork description
+export function parseArtworkDescription(index) {
+    const description = artworkDescriptions[index];
+    if (!description) return { title: 'Unknown Artwork', description: 'No description available.' };
+    
+    // Extract title from markdown format (**Title**)
+    const titleMatch = description.match(/\*\*(.*?)\*\*/);
+    const title = titleMatch ? titleMatch[1] : 'Untitled';
+    
+    // Get description (everything after the title)
+    const desc = description.split('\n')[1] || 'No description available.';
+    
+    return {
+        title: title,
+        description: desc
+    };
+} 

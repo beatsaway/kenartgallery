@@ -1,0 +1,9 @@
+[33mf11bbe1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m Add Node.js server setup and update project structure
+[33mf41087c[m Update welcome popup to dismiss on any click
+[33m9cd41ef[m Remove nipplejs library and its import
+[33mf16091c[m Update welcome popup links to use text-style instead of button-style
+[33meacac49[m Fix touch event handlers by removing duplicate camera rotation handlers and using OrbitControls
+[33m64b7fc1[m Fix mobile controls naming conflict on Render by using more specific function names
+[33m3553aa4[m Fixed mobile controls by renaming handleTouchMove to handleJoystickMove to avoid naming conflict
+[33m9ed4cf3[m Optimized animation loop and fixed WASD controls with sprint feature
+[33m113f815[m Update train speed and movement system

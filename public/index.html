@@ -11,12 +11,13 @@
             overflow: hidden;
             font-family: 'Helvetica Neue', Arial, sans-serif;
             touch-action: none;  /* Prevent default touch actions */
+            background: #000;
         }
 
         #scene-container { 
-            position: absolute;
-            width: 100%; 
-            height: 100%; 
+            position: relative;
+            width: 100vw;
+            height: 100vh;
             background: linear-gradient(to bottom, #87CEEB, #1E90FF);
         }
 
@@ -243,17 +244,44 @@
                 right: auto;
             }
         }
+
+        #center-dot {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1px;
+            height: 1px;
+            background-color: black;
+            z-index: 1000;
+        }
+        .artwork-description {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 300px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: none;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        .artwork-description h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .artwork-description p {
+            margin: 0;
+            color: #666;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
     <div id="scene-container"></div>
-    <div id="controls-info">
-        <p>WASD - Move</p>
-        <p>Mouse - Look around</p>
-        <p>E - Board/Exit train</p>
-        <p>ESC - Pause</p>
-    </div>
-    <div id="artwork-info"></div>
+    <div id="center-dot"></div>
     <div id="welcome-popup" class="visible">
         <h1 class="welcome-title">Entropy Emergence through Repetition</h1>
         <div class="artist-credit">
@@ -281,16 +309,74 @@
         import { GalleryControls } from './js/controls.js';
         import { artworkDescriptions } from './js/artworkDescriptions.js';
         
-        // Add error handling for module loading
+        // Function to parse artwork description
+        function parseArtworkDescription(index) {
+            const description = artworkDescriptions[index];
+            if (!description) return { title: 'Unknown Artwork', description: 'No description available.' };
+            
+            // Extract title from markdown format (**Title**)
+            const titleMatch = description.match(/\*\*(.*?)\*\*/);
+            const title = titleMatch ? titleMatch[1] : 'Untitled';
+            
+            // Get description (everything after the title)
+            const desc = description.split('\n')[1] || 'No description available.';
+            
+            return {
+                title: title,
+                description: desc
+            };
+        }
+        
+        // Enhanced error handling for module loading
         window.addEventListener('error', (event) => {
             console.error('Error loading module:', event.message);
-            document.getElementById('scene-container').innerHTML = `
-                <div style="color: white; padding: 20px; text-align: center;">
-                    <h2>Error Loading Gallery</h2>
-                    <p>Please check the console for details.</p>
-                </div>
+            const errorMessage = document.createElement('div');
+            errorMessage.style.cssText = `
+                color: white;
+                padding: 20px;
+                text-align: center;
+                background: rgba(0, 0, 0, 0.8);
+                border-radius: 8px;
+                margin: 20px;
             `;
+            errorMessage.innerHTML = `
+                    <h2>Error Loading Gallery</h2>
+                <p>${event.message}</p>
+                <p>Please check your browser console for details.</p>
+                <p>If the problem persists, try:</p>
+                <ul style="text-align: left; display: inline-block;">
+                    <li>Refreshing the page</li>
+                    <li>Using a different browser</li>
+                    <li>Checking your internet connection</li>
+                </ul>
+            `;
+            document.getElementById('scene-container').innerHTML = '';
+            document.getElementById('scene-container').appendChild(errorMessage);
         });
+
+        // Enhanced mobile device detection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isLowEndDevice = isMobile && (
+            /iPhone|iPad|iPod/i.test(navigator.userAgent) && 
+            parseInt(navigator.userAgent.match(/OS (\d+)_/)[1]) < 13
+        );
+
+        // Add loading indicator
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 1000;
+        `;
+        loadingIndicator.innerHTML = '<h2>Loading Gallery...</h2>';
+        document.getElementById('scene-container').appendChild(loadingIndicator);
 
         // Add error handling for scene initialization
         try {
@@ -305,19 +391,18 @@
             // Scene setup
             const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ 
-                antialias: true,
-                powerPreference: "high-performance"
+                antialias: isMobile ? false : true,
+                powerPreference: isMobile ? "low-power" : "high-performance"
             });
             
             // Mobile optimizations
-            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            if (isMobile) {
                 renderer.setPixelRatio(1); // Lower pixel ratio on mobile
                 renderer.shadowMap.enabled = false; // Disable shadows on mobile
                 renderer.shadowMap.type = THREE.BasicShadowMap;
                 
                 // Reduce texture quality on mobile
-                textureLoader.crossOrigin = 'anonymous';
-                const maxTextureSize = 512; // Reduced from 1024
+                const maxTextureSize = isLowEndDevice ? 256 : 512;
                 
                 // Optimize artwork textures for mobile
                 for (let i = 1; i <= 19; i++) {
@@ -341,10 +426,12 @@
                 renderer.shadowMap.enabled = true;
                 renderer.shadowMap.type = THREE.PCFShadowMap;
             }
+            
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFShadowMap;
             document.getElementById('scene-container').appendChild(renderer.domElement);
+            
+            // Remove loading indicator after renderer is ready
+            loadingIndicator.style.display = 'none';
             
             // Movement and controls
             const controls = new GalleryControls(camera, scene);
@@ -756,7 +843,12 @@
                 
                 // Create group for the artwork and frame
                 const artworkGroup = new THREE.Group();
-                artworkGroup.userData = { title: title, index: index };
+                const artworkInfo = parseArtworkDescription(index);
+                artworkGroup.userData = { 
+                    title: artworkInfo.title,
+                    index: index,
+                    description: artworkInfo.description
+                };
                 
                 // Create artwork
                 const artworkGeometry = new THREE.PlaneGeometry(width, height);
@@ -780,41 +872,159 @@
                 
                 // Create frame
                 const frameColor = 0x8B4513;  // Wood brown
+                const frameGeometry = new THREE.BoxGeometry(width + frameBorderSize * 2, height + frameBorderSize * 2, frameThickness * 2);
                 const frameMaterial = new THREE.MeshStandardMaterial({ 
                     color: frameColor,
-                    roughness: 0.7,
-                    metalness: 0.3
+                    roughness: 0.8,
+                    metalness: 0.2
                 });
+                const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+                frame.position.z = -frameThickness / 2;
+                artworkGroup.add(frame);
                 
-                // Top frame
-                const topFrameGeometry = new THREE.BoxGeometry(width + frameBorderSize * 2, frameBorderSize, frameThickness * 1.5);
-                const topFrame = new THREE.Mesh(topFrameGeometry, frameMaterial);
-                topFrame.position.y = height / 2 + frameBorderSize / 2;
-                topFrame.position.z = frameThickness / 2;
-                artworkGroup.add(topFrame);
-                
-                // Bottom frame
-                const bottomFrameGeometry = new THREE.BoxGeometry(width + frameBorderSize * 2, frameBorderSize, frameThickness * 1.5);
-                const bottomFrame = new THREE.Mesh(bottomFrameGeometry, frameMaterial);
-                bottomFrame.position.y = -height / 2 - frameBorderSize / 2;
-                bottomFrame.position.z = frameThickness / 2;
-                artworkGroup.add(bottomFrame);
-                
-                // Left frame
-                const leftFrameGeometry = new THREE.BoxGeometry(frameBorderSize, height, frameThickness * 1.5);
-                const leftFrame = new THREE.Mesh(leftFrameGeometry, frameMaterial);
-                leftFrame.position.x = -width / 2 - frameBorderSize / 2;
-                leftFrame.position.z = frameThickness / 2;
-                artworkGroup.add(leftFrame);
-                
-                // Right frame
-                const rightFrameGeometry = new THREE.BoxGeometry(frameBorderSize, height, frameThickness * 1.5);
-                const rightFrame = new THREE.Mesh(rightFrameGeometry, frameMaterial);
-                rightFrame.position.x = width / 2 + frameBorderSize / 2;
-                rightFrame.position.z = frameThickness / 2;
-                artworkGroup.add(rightFrame);
+                // Create description sign
+                const signGroup = createDescriptionSign(artworkInfo.title, artworkInfo.description);
+                signGroup.position.set(0, -height/2 - 1.2, frameThickness + 0.02); // Position lower
+                artworkGroup.add(signGroup);
                 
                 return artworkGroup;
+            }
+            
+            // Function to create 3D text sign
+            function createDescriptionSign(title, description) {
+                const signGroup = new THREE.Group();
+                
+                // Create sign background
+                const signWidth = 2.5;
+                const signHeight = 1.5;
+                const signThickness = 0.05;
+                const signGeometry = new THREE.BoxGeometry(signWidth, signHeight, signThickness);
+                const signMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xffffff,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                const signBackground = new THREE.Mesh(signGeometry, signMaterial);
+                signBackground.position.z = -signThickness/2;
+                signGroup.add(signBackground);
+                
+                // Create front text canvas
+                const frontCanvas = document.createElement('canvas');
+                const frontCtx = frontCanvas.getContext('2d');
+                frontCanvas.width = 512;
+                frontCanvas.height = 256;
+                
+                // Draw white background
+                frontCtx.fillStyle = 'white';
+                frontCtx.fillRect(0, 0, frontCanvas.width, frontCanvas.height);
+                
+                // Add border
+                frontCtx.strokeStyle = 'black';
+                frontCtx.lineWidth = 4;
+                frontCtx.strokeRect(8, 8, frontCanvas.width - 16, frontCanvas.height - 16);
+                
+                // Draw title
+                frontCtx.font = 'bold 28px Arial';
+                frontCtx.fillStyle = 'black';
+                frontCtx.textAlign = 'center';
+                frontCtx.textBaseline = 'top';
+                frontCtx.fillText(title, frontCanvas.width / 2, 24);
+                
+                // Draw description with word wrapping
+                frontCtx.font = '20px Arial';
+                frontCtx.textAlign = 'left';
+                frontCtx.textBaseline = 'top';
+                
+                const maxWidth = frontCanvas.width - 48;
+                const lineHeight = 24;
+                const startY = 70;
+                
+                wrapText(frontCtx, description, 24, startY, maxWidth, lineHeight);
+                
+                // Create back text canvas (mirrored)
+                const backCanvas = document.createElement('canvas');
+                const backCtx = backCanvas.getContext('2d');
+                backCanvas.width = 512;
+                backCanvas.height = 256;
+                
+                // Draw white background
+                backCtx.fillStyle = 'white';
+                backCtx.fillRect(0, 0, backCanvas.width, backCanvas.height);
+                
+                // Add border
+                backCtx.strokeStyle = 'black';
+                backCtx.lineWidth = 4;
+                backCtx.strokeRect(8, 8, backCanvas.width - 16, backCanvas.height - 16);
+                
+                // Draw title (mirrored)
+                backCtx.font = 'bold 28px Arial';
+                backCtx.fillStyle = 'black';
+                backCtx.textAlign = 'center';
+                backCtx.textBaseline = 'top';
+                backCtx.fillText(title, backCanvas.width / 2, 24);
+                
+                // Draw description with word wrapping (mirrored)
+                backCtx.font = '20px Arial';
+                backCtx.textAlign = 'left';
+                backCtx.textBaseline = 'top';
+                
+                wrapText(backCtx, description, 24, startY, maxWidth, lineHeight);
+                
+                // Create textures from canvases
+                const frontTexture = new THREE.CanvasTexture(frontCanvas);
+                frontTexture.needsUpdate = true;
+                
+                const backTexture = new THREE.CanvasTexture(backCanvas);
+                backTexture.needsUpdate = true;
+                
+                // Create two planes for text (front and back)
+                const textGeometry = new THREE.PlaneGeometry(signWidth * 0.9, signHeight * 0.9);
+                
+                // Front text plane
+                const frontTextMaterial = new THREE.MeshBasicMaterial({ 
+                    map: frontTexture,
+                    transparent: false,
+                    side: THREE.DoubleSide
+                });
+                const frontTextMesh = new THREE.Mesh(textGeometry, frontTextMaterial);
+                frontTextMesh.position.z = -signThickness/2 + 0.01;
+                signGroup.add(frontTextMesh);
+                
+                // Back text plane
+                const backTextMaterial = new THREE.MeshBasicMaterial({ 
+                    map: backTexture,
+                    transparent: false,
+                    side: THREE.DoubleSide
+                });
+                const backTextMesh = new THREE.Mesh(textGeometry, backTextMaterial);
+                backTextMesh.position.z = signThickness/2 - 0.01;
+                signGroup.add(backTextMesh);
+                
+                return signGroup;
+            }
+            
+            // Helper function to wrap text
+            function wrapText(context, text, x, y, maxWidth, lineHeight) {
+                const words = text.split(' ');
+                let line = '';
+                let testLine = '';
+                let lineCount = 0;
+                
+                for (let n = 0; n < words.length; n++) {
+                    testLine = line + words[n] + ' ';
+                    const metrics = context.measureText(testLine);
+                    const testWidth = metrics.width;
+                    
+                    if (testWidth > maxWidth && n > 0) {
+                        context.fillText(line, x, y + (lineCount * lineHeight));
+                        line = words[n] + ' ';
+                        lineCount++;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                
+                context.fillText(line, x, y + (lineCount * lineHeight));
             }
             
             function placeArtworks() {
@@ -1138,81 +1348,99 @@
             setRandomInitialPosition();
 
             // Add click handler to remove welcome popup when clicking anywhere
-            const welcomePopup = document.getElementById('welcome-popup');
+                const welcomePopup = document.getElementById('welcome-popup');
             document.addEventListener('click', function() {
-                welcomePopup.style.opacity = '0';
+                    welcomePopup.style.opacity = '0';
                 welcomePopup.style.transform = 'translate(-50%, 20px)';
-                setTimeout(() => {
-                    welcomePopup.style.display = 'none';
+                    setTimeout(() => {
+                        welcomePopup.style.display = 'none';
                 }, 300);
             }, { once: true });  // The 'once: true' option ensures the event only fires once
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+                
+                // Add train boarding event listener
+                document.addEventListener('keydown', (event) => {
+                    if (event.code === 'KeyE') {
+                        const playerPos = camera.position;
+                        let nearestCart = null;
+                        let shortestDistance = Infinity;
 
-            // Handle window resize
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-            
-            // Add train boarding event listener
-            document.addEventListener('keydown', (event) => {
-                if (event.code === 'KeyE') {
-                    const playerPos = camera.position;
-                    let nearestCart = null;
-                    let shortestDistance = Infinity;
+                        trainSystem.carts.forEach(cart => {
+                            const cartPos = cart.position;
+                            const distance = Math.sqrt(
+                                Math.pow(playerPos.x - cartPos.x, 2) +
+                                Math.pow(playerPos.z - cartPos.z, 2)
+                            );
 
-                    trainSystem.carts.forEach(cart => {
-                        const cartPos = cart.position;
-                        const distance = Math.sqrt(
-                            Math.pow(playerPos.x - cartPos.x, 2) +
-                            Math.pow(playerPos.z - cartPos.z, 2)
-                        );
+                            if (distance < shortestDistance) {
+                                shortestDistance = distance;
+                                nearestCart = cart;
+                            }
+                        });
 
-                        if (distance < shortestDistance) {
-                            shortestDistance = distance;
-                            nearestCart = cart;
-                        }
-                    });
-
-                    if (shortestDistance < 3) {  // Increased interaction distance
-                        if (!camera.userData.onTrain) {
-                            // Board train
-                            camera.userData.onTrain = nearestCart;
-                            camera.position.x = nearestCart.position.x + 0.5;
-                            camera.position.y = nearestCart.position.y + 1.2;
-                            camera.position.z = nearestCart.position.z;
-                            artworkInfoElement.innerHTML = "<strong>Press E to exit train</strong>";
-                            artworkInfoElement.style.display = 'block';
-                        } else {
-                            // Exit train
-                            camera.userData.onTrain = null;
-                            camera.position.x = nearestCart.position.x + 2;
-                            artworkInfoElement.style.display = 'none';
+                        if (shortestDistance < 3) {  // Increased interaction distance
+                            if (!camera.userData.onTrain) {
+                                // Board train
+                                camera.userData.onTrain = nearestCart;
+                                camera.position.x = nearestCart.position.x + 0.5;
+                                camera.position.y = nearestCart.position.y + 1.2;
+                                camera.position.z = nearestCart.position.z;
+                                artworkInfoElement.innerHTML = "<strong>Press E to exit train</strong>";
+                                artworkInfoElement.style.display = 'block';
+                            } else {
+                                // Exit train
+                                camera.userData.onTrain = null;
+                                camera.position.x = nearestCart.position.x + 2;
+                                artworkInfoElement.style.display = 'none';
+                            }
                         }
                     }
-                }
-            });
+                });
+                
+            // Add performance monitoring
+            let frameCount = 0;
+            let lastFPSUpdate = performance.now();
             
-            // Start animation
+            function updateFPS() {
+                const now = performance.now();
+                const delta = now - lastFPSUpdate;
+                
+                if (delta >= 1000) {
+                    frameCount = 0;
+                    lastFPSUpdate = now;
+                }
+            }
+            
             function animate() {
                 requestAnimationFrame(animate);
                 
-                // Skip update if tab is hidden
-                if (document.hidden) return;
+                // Skip update if tab is hidden or on low-end devices
+                if (document.hidden || (isLowEndDevice && !document.hasFocus())) return;
                 
                 const time = performance.now();
+                frameCount++;
+                updateFPS();
                 
                 // Only update NPCs and train if they exist and are visible
                 if (scene.userData.npcs && scene.userData.npcs.length > 0) {
-                    // Only update NPCs every other frame to reduce load
-                    if (time % 2 === 0) {
+                    // Reduce update frequency on mobile devices
+                    const updateInterval = isMobile ? 3 : 2;
+                    if (time % updateInterval === 0) {
                         updateNPCs(time);
                     }
                 }
                 
-                // Update train system
+                // Update train system with reduced frequency on mobile
                 if (trainSystem) {
-                    trainSystem.update();
+                    if (!isMobile || time % 2 === 0) {
+                        trainSystem.update();
+                    }
                 }
                 
                 // Update camera position if on train
@@ -1222,6 +1450,23 @@
                 
                 // Update controls with mobile input
                 galleryControls.update();
+                
+                // Monitor frame rate on mobile
+                if (isMobile && time % 1000 === 0) {
+                    const fps = 1000 / (time - prevTime);
+                    if (fps < 30) {
+                        // Further reduce quality if needed
+                        if (fps < 20) {
+                            renderer.setPixelRatio(0.75);
+                            // Reduce texture quality further
+                            scene.traverse((object) => {
+                                if (object.material && object.material.map) {
+                                    object.material.map.minFilter = THREE.NearestFilter;
+                                }
+                            });
+                        }
+                    }
+                }
                 
                 renderer.render(scene, camera);
             }
