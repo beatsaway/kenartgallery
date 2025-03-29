@@ -1273,33 +1273,11 @@ Press E near train to board/exit</div>
                     const rect = joystickContainer.getBoundingClientRect();
                     
                     if (touch.clientX < rect.left || touch.clientX > rect.right ||
-                        touch.clientY < rect.top || touch.clientY > rect.bottom) {
-                        isDragging = true;
-                        startX = touch.clientX;
-                        startY = touch.clientY;
-                        // Store initial camera rotation
-                        cameraStartRotation = {
-                            x: camera.rotation.x,
-                            y: camera.rotation.y
-                        };
+                        touch.clientY < rect.top || touch.clientY < rect.bottom) {
+                        // Let OrbitControls handle the camera rotation
+                        return;
                     }
                 }, { passive: true });
-
-                document.addEventListener('touchmove', (event) => {
-                    if (isDragging && cameraStartRotation) {
-                        event.preventDefault();
-                        const touch = event.touches[0];
-                        const deltaX = touch.clientX - startX;
-                        const deltaY = touch.clientY - startY;
-                        
-                        // Apply rotation relative to initial camera position
-                        camera.rotation.y = cameraStartRotation.y - deltaX * 0.002;
-                        camera.rotation.x = cameraStartRotation.x - deltaY * 0.002;
-                        
-                        // Limit vertical rotation
-                        camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
-                    }
-                }, { passive: false });
 
                 document.addEventListener('touchend', () => {
                     isDragging = false;
