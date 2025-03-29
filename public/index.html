@@ -21,23 +21,23 @@
         }
 
         #controls-info {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: #ffffff;
-            padding: 20px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            line-height: 1.6;
-            text-align: center;
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            font-family: 'Minecraft', monospace;
+            font-size: 14px;
+            text-shadow: 2px 2px #000;
+            background: none;
+            padding: 0;
+            border: none;
             pointer-events: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
-            white-space: pre-line;
-            transition: opacity 0.3s ease;
+            z-index: 1000;
+            line-height: 1.4;
+        }
+
+        #controls-info p {
+            margin: 4px 0;
         }
 
         #artwork-info {
@@ -136,13 +136,21 @@
             opacity: 0;
             transition: opacity 0.3s ease, transform 0.3s ease;
             transform: translate(-50%, 20px);
-            pointer-events: none;
+            pointer-events: auto;
+            cursor: pointer;
+            visibility: visible;
         }
 
         #welcome-popup.visible {
             opacity: 1;
             transform: translate(-50%, 0);
             pointer-events: auto;
+        }
+
+        #welcome-popup.fade-out {
+            opacity: 0;
+            transform: translate(-50%, 20px);
+            pointer-events: none;
         }
 
         .welcome-title {
@@ -220,36 +228,8 @@
         }
         
         @media (max-width: 768px) {
-            #joystick {
-                display: block;
-            }
-            
             #controls-info {
                 display: none;  /* Hide desktop controls info on mobile */
-            }
-
-            /* Add touch feedback styles */
-            .touch-feedback {
-                position: fixed;
-                width: 60px;
-                height: 60px;
-                background: rgba(255, 255, 255, 0.2);
-                border-radius: 50%;
-                pointer-events: none;
-                transform: translate(-50%, -50%);
-                animation: touchRipple 0.6s ease-out;
-                z-index: 1000;
-            }
-
-            @keyframes touchRipple {
-                0% {
-                    transform: translate(-50%, -50%) scale(0.3);
-                    opacity: 0.5;
-                }
-                100% {
-                    transform: translate(-50%, -50%) scale(1.5);
-                    opacity: 0;
-                }
             }
 
             /* Improve mobile UI elements */
@@ -267,9 +247,12 @@
 </head>
 <body>
     <div id="scene-container"></div>
-    <div id="controls-info">Move mouse to look around
-Use WASD keys to move
-Press E near train to board/exit</div>
+    <div id="controls-info">
+        <p>WASD - Move</p>
+        <p>Mouse - Look around</p>
+        <p>E - Board/Exit train</p>
+        <p>ESC - Pause</p>
+    </div>
     <div id="artwork-info"></div>
     <div id="welcome-popup" class="visible">
         <h1 class="welcome-title">Entropy Emergence through Repetition</h1>
@@ -1154,434 +1137,96 @@ Press E near train to board/exit</div>
             const galleryControls = new GalleryControls(camera, scene);
             setRandomInitialPosition();
 
-            // Initialize mobile controls
-            if (window.matchMedia("(max-width: 768px)").matches || window.matchMedia("(max-height: 768px)").matches) {
-                let joystickContainer = null;
-                let joystickDot = null;
-                let directionIndicator = null;
-                let isDragging = false;
-                let startX = 0;
-                let startY = 0;
-                let currentX = 0;
-                let currentY = 0;
+            // Add click handler to remove welcome popup when clicking anywhere
+            const welcomePopup = document.getElementById('welcome-popup');
+            document.addEventListener('click', function() {
+                welcomePopup.style.opacity = '0';
+                welcomePopup.style.transform = 'translate(-50%, 20px)';
+                setTimeout(() => {
+                    welcomePopup.style.display = 'none';
+                }, 300);
+            }, { once: true });  // The 'once: true' option ensures the event only fires once
 
-                function createJoystickUI() {
-                    // Remove existing elements if any
-                    if (joystickContainer) joystickContainer.remove();
-                    if (directionIndicator) directionIndicator.remove();
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            
+            // Add train boarding event listener
+            document.addEventListener('keydown', (event) => {
+                if (event.code === 'KeyE') {
+                    const playerPos = camera.position;
+                    let nearestCart = null;
+                    let shortestDistance = Infinity;
 
-                    // Create joystick container
-                    joystickContainer = document.createElement('div');
-                    joystickContainer.style.position = 'fixed';
-                    joystickContainer.style.left = '60px';
-                    joystickContainer.style.bottom = '60px';
-                    joystickContainer.style.width = '100px';
-                    joystickContainer.style.height = '100px';
-                    joystickContainer.style.borderRadius = '50%';
-                    joystickContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                    joystickContainer.style.border = '2px solid rgba(255, 255, 255, 0.5)';
-                    joystickContainer.style.zIndex = '1000';
+                    trainSystem.carts.forEach(cart => {
+                        const cartPos = cart.position;
+                        const distance = Math.sqrt(
+                            Math.pow(playerPos.x - cartPos.x, 2) +
+                            Math.pow(playerPos.z - cartPos.z, 2)
+                        );
 
-                    // Create inner joystick dot
-                    joystickDot = document.createElement('div');
-                    joystickDot.style.position = 'absolute';
-                    joystickDot.style.width = '30px';
-                    joystickDot.style.height = '30px';
-                    joystickDot.style.borderRadius = '50%';
-                    joystickDot.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-                    joystickDot.style.left = '50%';
-                    joystickDot.style.top = '50%';
-                    joystickDot.style.transform = 'translate(-50%, -50%)';
-                    joystickContainer.appendChild(joystickDot);
-
-                    // Create direction dots
-                    const dotSize = '8px';
-                    const dotStyle = {
-                        position: 'absolute',
-                        width: dotSize,
-                        height: dotSize,
-                        borderRadius: '50%',
-                        opacity: '0.5'
-                    };
-
-                    // W (Up) - Red
-                    const wDot = document.createElement('div');
-                    Object.assign(wDot.style, dotStyle, {
-                        top: '5px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        backgroundColor: '#ff0000'
+                        if (distance < shortestDistance) {
+                            shortestDistance = distance;
+                            nearestCart = cart;
+                        }
                     });
-                    joystickContainer.appendChild(wDot);
 
-                    // A (Left) - Blue
-                    const aDot = document.createElement('div');
-                    Object.assign(aDot.style, dotStyle, {
-                        left: '5px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        backgroundColor: '#0000ff'
-                    });
-                    joystickContainer.appendChild(aDot);
-
-                    // S (Down) - Green
-                    const sDot = document.createElement('div');
-                    Object.assign(sDot.style, dotStyle, {
-                        bottom: '5px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        backgroundColor: '#00ff00'
-                    });
-                    joystickContainer.appendChild(sDot);
-
-                    // D (Right) - Yellow
-                    const dDot = document.createElement('div');
-                    Object.assign(dDot.style, dotStyle, {
-                        right: '5px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        backgroundColor: '#ffff00'
-                    });
-                    joystickContainer.appendChild(dDot);
-
-                    document.body.appendChild(joystickContainer);
-
-                    // Add touch event listeners
-                    joystickContainer.addEventListener('touchstart', handleJoystickTouchStart, { passive: true });
-                    joystickContainer.addEventListener('touchmove', handleJoystickTouchMove, { passive: false });
-                    joystickContainer.addEventListener('touchend', handleJoystickTouchEnd);
-                }
-
-                function handleJoystickTouchStart(event) {
-                    const touch = event.touches[0];
-                    const rect = joystickContainer.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    
-                    startX = touch.clientX - centerX;
-                    startY = touch.clientY - centerY;
-                    isDragging = true;
-                }
-
-                function handleJoystickTouchMove(event) {
-                    if (!isDragging) return;
-                    event.preventDefault();
-
-                    const touch = event.touches[0];
-                    const rect = joystickContainer.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-
-                    currentX = touch.clientX - centerX;
-                    currentY = touch.clientY - centerY;
-
-                    // Calculate distance from center
-                    const distance = Math.sqrt(currentX * currentX + currentY * currentY);
-                    const maxDistance = rect.width / 2 - 15; // Half of container minus half of dot
-
-                    // Limit joystick movement to circle
-                    if (distance > maxDistance) {
-                        const angle = Math.atan2(currentY, currentX);
-                        currentX = Math.cos(angle) * maxDistance;
-                        currentY = Math.sin(angle) * maxDistance;
-                    }
-
-                    // Update joystick dot position
-                    joystickDot.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
-
-                    // Calculate direction vector with sensitivity control
-                    const sensitivity = 0.8; // Adjust this value to control movement sensitivity
-                    const vector = {
-                        x: (currentX / maxDistance) * sensitivity,
-                        y: (currentY / maxDistance) * sensitivity
-                    };
-
-                    // Add dead zone to prevent accidental movement
-                    const deadZone = 0.1;
-                    if (Math.abs(vector.x) < deadZone) vector.x = 0;
-                    if (Math.abs(vector.y) < deadZone) vector.y = 0;
-
-                    // Update direction indicators with smoother transitions
-                    const dots = joystickContainer.children;
-                    const opacityTransition = 'opacity 0.2s ease';
-                    dots[1].style.transition = opacityTransition;
-                    dots[2].style.transition = opacityTransition;
-                    dots[3].style.transition = opacityTransition;
-                    dots[4].style.transition = opacityTransition;
-
-                    dots[1].style.opacity = vector.y < -0.5 ? '1' : '0.5';  // W (Up)
-                    dots[2].style.opacity = vector.x < -0.5 ? '1' : '0.5';  // A (Left)
-                    dots[3].style.opacity = vector.y > 0.5 ? '1' : '0.5';   // S (Down)
-                    dots[4].style.opacity = vector.x > 0.5 ? '1' : '0.5';   // D (Right)
-
-                    // Update movement vector without affecting camera rotation
-                    const forward = new THREE.Vector3();
-                    camera.getWorldDirection(forward);
-                    forward.y = 0;
-                    forward.normalize();
-
-                    const right = new THREE.Vector3();
-                    right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
-
-                    const moveDirection = new THREE.Vector3();
-                    moveDirection.addScaledVector(forward, -vector.y);
-                    moveDirection.addScaledVector(right, vector.x);
-                    moveDirection.normalize();
-
-                    galleryControls.moveVector.copy(moveDirection);
-                }
-
-                function handleJoystickTouchEnd() {
-                    isDragging = false;
-                    currentX = 0;
-                    currentY = 0;
-                    joystickDot.style.transform = 'translate(-50%, -50%)';
-                    galleryControls.moveVector.set(0, 0, 0);
-                    
-                    // Reset direction indicators
-                    const dots = joystickContainer.children;
-                    dots[1].style.opacity = '0.5';  // W (Up)
-                    dots[2].style.opacity = '0.5';  // A (Left)
-                    dots[3].style.opacity = '0.5';  // S (Down)
-                    dots[4].style.opacity = '0.5';  // D (Right)
-                }
-
-                // Create initial joystick UI
-                createJoystickUI();
-
-                // Handle orientation changes
-                window.addEventListener('orientationchange', () => {
-                    setTimeout(createJoystickUI, 100);
-                });
-
-                // Handle window resize
-                window.addEventListener('resize', () => {
-                    const isLandscape = window.innerWidth > window.innerHeight;
-                    if (isLandscape !== (window.innerWidth > window.innerHeight)) {
-                        //createJoystickUI();
-                    }
-                });
-
-                // Handle camera control outside joystick area
-                let cameraStartRotation = null;
-
-                document.addEventListener('touchstart', (event) => {
-                    const touch = event.touches[0];
-                    const rect = joystickContainer.getBoundingClientRect();
-                    
-                    if (touch.clientX < rect.left || touch.clientX > rect.right ||
-                        touch.clientY < rect.top || touch.clientY < rect.bottom) {
-                        // Let OrbitControls handle the camera rotation
-                        return;
-                    }
-                }, { passive: true });
-
-                document.addEventListener('touchend', () => {
-                    isDragging = false;
-                    cameraStartRotation = null;
-                });
-
-                // Remove auto-hide timers and modify click behavior
-                const welcomePopup = document.getElementById('welcome-popup');
-                const sceneContainer = document.getElementById('scene-container');
-
-                // Handle right-click to show welcome popup and controls
-                document.addEventListener('contextmenu', (event) => {
-                    event.preventDefault();  // Prevent default context menu
-                    
-                    // Show welcome popup
-                    welcomePopup.style.display = 'flex';
-                    welcomePopup.style.opacity = '1';
-                    
-                    // Show controls info
-                    controlsInfoElement.style.display = 'block';
-                    
-                    // Don't lock controls on right click
-                    if (!controls.isLocked) {
-                        return;
-                    }
-                });
-
-                // Modify the first click handler to store the elements' display state
-                function handleFirstClick() {
-                    // Fade out welcome popup
-                    welcomePopup.style.opacity = '0';
-                    setTimeout(() => {
-                        welcomePopup.style.display = 'none';
-                    }, 2000);
-
-                    // Lock pointer for camera control
-                    controls.lock();
-                }
-                
-                // Add click listener for initial interaction
-                document.addEventListener('click', handleFirstClick);
-
-                // Remove auto-hide controls info timer
-                galleryControls.addEventListener('lock', function () {
-                    // Keep controls visible until movement
-                    controlsInfoElement.style.display = 'block';
-                });
-                
-                galleryControls.addEventListener('unlock', function () {
-                    controlsInfoElement.style.display = 'block';
-                });
-
-                // Add movement listener to hide controls
-                document.addEventListener('keydown', function(event) {
-                    if (['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(event.code)) {
-                        controlsInfoElement.style.display = 'none';
-                    }
-                    // Show welcome popup and controls info when ESC is pressed
-                    if (event.code === 'Escape') {
-                        welcomePopup.style.display = 'flex';
-                        welcomePopup.style.opacity = '1';
-                        controlsInfoElement.style.display = 'block';
-                    }
-                });
-                
-                // Check if user is looking at an artwork
-                function checkArtworkFocus() {
-                    const raycaster = new THREE.Raycaster();
-                    const direction = new THREE.Vector3();
-                    
-                    camera.getWorldDirection(direction);
-                    raycaster.set(camera.position, direction);
-                    
-                    const intersects = raycaster.intersectObjects(scene.children, true);
-                    let foundArtwork = false;
-                    
-                    if (intersects.length > 0) {
-                        for (let i = 0; i < intersects.length; i++) {
-                            let obj = intersects[i].object;
-                            let artworkParent = null;
-                            
-                            while (obj && !artworkParent) {
-                                if (obj.userData && obj.userData.title) {
-                                    artworkParent = obj;
-                                }
-                                obj = obj.parent;
-                            }
-                            
-                            if (artworkParent) {
-                                const distance = intersects[i].distance;
-                                if (distance < 25) {  // Increased viewing distance from 15 to 25 units
-                                    artworkInfoElement.innerHTML = artworkParent.userData.title.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-                                    artworkInfoElement.style.display = 'block';
-                                    foundArtwork = true;
-                                    break;
-                                }
-                            }
+                    if (shortestDistance < 3) {  // Increased interaction distance
+                        if (!camera.userData.onTrain) {
+                            // Board train
+                            camera.userData.onTrain = nearestCart;
+                            camera.position.x = nearestCart.position.x + 0.5;
+                            camera.position.y = nearestCart.position.y + 1.2;
+                            camera.position.z = nearestCart.position.z;
+                            artworkInfoElement.innerHTML = "<strong>Press E to exit train</strong>";
+                            artworkInfoElement.style.display = 'block';
+                        } else {
+                            // Exit train
+                            camera.userData.onTrain = null;
+                            camera.position.x = nearestCart.position.x + 2;
+                            artworkInfoElement.style.display = 'none';
                         }
                     }
-                    
-                    if (!foundArtwork) {
-                        artworkInfoElement.style.display = 'none';
+                }
+            });
+            
+            // Start animation
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                // Skip update if tab is hidden
+                if (document.hidden) return;
+                
+                const time = performance.now();
+                
+                // Only update NPCs and train if they exist and are visible
+                if (scene.userData.npcs && scene.userData.npcs.length > 0) {
+                    // Only update NPCs every other frame to reduce load
+                    if (time % 2 === 0) {
+                        updateNPCs(time);
                     }
                 }
                 
-                // Modify the animate function to handle mobile controls
-                function animate() {
-                    requestAnimationFrame(animate);
-                    
-                    // Skip update if tab is hidden
-                    if (document.hidden) return;
-                    
-                    const time = performance.now();
-                    
-                    // Only update NPCs and train if they exist and are visible
-                    if (scene.userData.npcs && scene.userData.npcs.length > 0) {
-                        // Only update NPCs every other frame to reduce load
-                        if (time % 2 === 0) {
-                            updateNPCs(time);
-                        }
-                    }
-                    
-                    // Update train system
-                    if (trainSystem) {
-                        trainSystem.update();
-                    }
-                    
-                    // Update camera position if on train
-                    if (camera.userData.onTrain) {
-                        camera.position.z = camera.userData.onTrain.position.z;
-                    }
-                    
-                    // Update controls with mobile input
-                    galleryControls.update();
-                    
-                    // Only check artwork focus if we're not on the train and every other frame
-                    if (!camera.userData.onTrain && time % 2 === 0) {
-                        checkArtworkFocus();
-                    }
-                    
-                    renderer.render(scene, camera);
+                // Update train system
+                if (trainSystem) {
+                    trainSystem.update();
                 }
                 
-                // Handle window resize
-                window.addEventListener('resize', () => {
-                    camera.aspect = window.innerWidth / window.innerHeight;
-                    camera.updateProjectionMatrix();
-                    renderer.setSize(window.innerWidth, window.innerHeight);
-                });
+                // Update camera position if on train
+                if (camera.userData.onTrain) {
+                    camera.position.z = camera.userData.onTrain.position.z;
+                }
                 
-                // Add train boarding event listener
-                document.addEventListener('keydown', (event) => {
-                    if (event.code === 'KeyE') {
-                        const playerPos = camera.position;
-                        let nearestCart = null;
-                        let shortestDistance = Infinity;
-
-                        trainSystem.carts.forEach(cart => {
-                            const cartPos = cart.position;
-                            const distance = Math.sqrt(
-                                Math.pow(playerPos.x - cartPos.x, 2) +
-                                Math.pow(playerPos.z - cartPos.z, 2)
-                            );
-
-                            if (distance < shortestDistance) {
-                                shortestDistance = distance;
-                                nearestCart = cart;
-                            }
-                        });
-
-                        if (shortestDistance < 3) {  // Increased interaction distance
-                            if (!camera.userData.onTrain) {
-                                // Board train
-                                camera.userData.onTrain = nearestCart;
-                                camera.position.x = nearestCart.position.x + 0.5;
-                                camera.position.y = nearestCart.position.y + 1.2;
-                                camera.position.z = nearestCart.position.z;
-                                artworkInfoElement.innerHTML = "<strong>Press E to exit train</strong>";
-                                artworkInfoElement.style.display = 'block';
-                            } else {
-                                // Exit train
-                                camera.userData.onTrain = null;
-                                camera.position.x = nearestCart.position.x + 2;
-                                artworkInfoElement.style.display = 'none';
-                            }
-                        }
-                    }
-                });
+                // Update controls with mobile input
+                galleryControls.update();
                 
-                // Add touch feedback
-                document.addEventListener('touchstart', (event) => {
-                    const touch = event.touches[0];
-                    const feedback = document.createElement('div');
-                    feedback.className = 'touch-feedback';
-                    feedback.style.left = touch.clientX + 'px';
-                    feedback.style.top = touch.clientY + 'px';
-                    document.body.appendChild(feedback);
-                    
-                    // Remove feedback element after animation
-                    feedback.addEventListener('animationend', () => {
-                        feedback.remove();
-                    });
-                }, { passive: true });
-                
-                // Start animation
-                animate();
+                renderer.render(scene, camera);
             }
+            
+            animate();
         } catch (error) {
             console.error('Error initializing gallery:', error);
             document.getElementById('scene-container').innerHTML = `
