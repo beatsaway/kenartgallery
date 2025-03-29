@@ -5,7 +5,7 @@ export class GalleryControls {
         this.camera = camera;
         this.scene = scene;
         this.moveSpeed = 0.1;
-        this.lookSpeed = 0.002;
+        this.lookSpeed = 0.001;
         this.moveVector = new THREE.Vector3();
         this._isLocked = false;
         this.euler = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -123,8 +123,8 @@ export class GalleryControls {
             if (this.isLocked) {
                 this.euler.setFromQuaternion(this.camera.quaternion);
                 this.euler.y -= event.movementX * this.lookSpeed;
-                this.euler.x -= event.movementY * this.lookSpeed;
-                this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
+                this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, 
+                    this.euler.x - event.movementY * this.lookSpeed));
                 this.camera.quaternion.setFromEuler(this.euler);
             }
         });
