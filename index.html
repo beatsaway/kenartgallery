@@ -190,12 +190,36 @@
 
         /* Mobile Controls */
         #joystick {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
             display: none;
+            z-index: 1000;
+        }
+
+        #joystick::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
         }
         
         @media (max-width: 768px) {
             #controls-info {
                 display: none;  /* Hide desktop controls info on mobile */
+            }
+
+            #joystick {
+                display: block;
             }
 
             /* Improve mobile UI elements */
@@ -271,6 +295,7 @@
 <body>
     <div id="scene-container"></div>
     <div id="center-dot"></div>
+    <div id="joystick"></div>
     <button id="train-button" title="Board/Exit Train">🚂🅴</button>
     <div id="welcome-popup" class="visible">
         <h1 class="welcome-title">Entropy Emergence through Repetition</h1>
@@ -1236,6 +1261,102 @@
         }
         
         animate();
+
+        // Add mobile touch controls
+        const joystick = document.getElementById('joystick');
+        let joystickActive = false;
+        let joystickStartX = 0;
+        let joystickStartY = 0;
+        let joystickCurrentX = 0;
+        let joystickCurrentY = 0;
+
+        joystick.addEventListener('touchstart', (e) => {
+            joystickActive = true;
+            const touch = e.touches[0];
+            const rect = joystick.getBoundingClientRect();
+            joystickStartX = touch.clientX - rect.left;
+            joystickStartY = touch.clientY - rect.top;
+            joystickCurrentX = joystickStartX;
+            joystickCurrentY = joystickStartY;
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!joystickActive) return;
+            const touch = e.touches[0];
+            const rect = joystick.getBoundingClientRect();
+            joystickCurrentX = touch.clientX - rect.left;
+            joystickCurrentY = touch.clientY - rect.top;
+
+            // Calculate movement direction
+            const dx = joystickCurrentX - joystickStartX;
+            const dy = joystickCurrentY - joystickStartY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const maxDistance = 50;
+
+            if (distance > maxDistance) {
+                const angle = Math.atan2(dy, dx);
+                joystickCurrentX = joystickStartX + Math.cos(angle) * maxDistance;
+                joystickCurrentY = joystickStartY + Math.sin(angle) * maxDistance;
+            }
+
+            // Update camera movement
+            const moveX = (joystickCurrentX - joystickStartX) / maxDistance;
+            const moveZ = (joystickCurrentY - joystickStartY) / maxDistance;
+            
+            if (camera.userData.movement) {
+                camera.userData.movement.x = moveX;
+                camera.userData.movement.z = moveZ;
+                camera.userData.movement.distance = Math.min(1, distance / maxDistance);
+            }
+        });
+
+        document.addEventListener('touchend', () => {
+            joystickActive = false;
+            joystickCurrentX = joystickStartX;
+            joystickCurrentY = joystickStartY;
+            if (camera.userData.movement) {
+                camera.userData.movement.x = 0;
+                camera.userData.movement.z = 0;
+                camera.userData.movement.distance = 0;
+            }
+        });
+
+        // Add touch controls for camera rotation
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let isRotating = false;
+
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                isRotating = true;
+            }
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isRotating || e.touches.length !== 1) return;
+            
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
+            
+            const deltaX = touchX - touchStartX;
+            const deltaY = touchY - touchStartY;
+            
+            // Rotate camera based on touch movement
+            camera.rotation.y -= deltaX * 0.01;
+            camera.rotation.x -= deltaY * 0.01;
+            
+            // Clamp vertical rotation
+            camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+            
+            touchStartX = touchX;
+            touchStartY = touchY;
+        });
+
+        document.addEventListener('touchend', () => {
+            isRotating = false;
+        });
     </script>
 </body>
 </html>
