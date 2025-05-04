@@ -1336,7 +1336,7 @@
         document.addEventListener('touchmove', (event) => {
             // Prevent default touch behavior
             event.preventDefault();
-            
+            if (camera.userData.onTrain) return;
             // Handle each active touch
             for (const touch of event.touches) {
                 const touchId = touch.identifier;
