@@ -190,36 +190,12 @@
 
         /* Mobile Controls */
         #joystick {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: 100px;
-            height: 100px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
             display: none;
-            z-index: 1000;
-        }
-
-        #joystick::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
         }
         
         @media (max-width: 768px) {
             #controls-info {
                 display: none;  /* Hide desktop controls info on mobile */
-            }
-
-            #joystick {
-                display: block;
             }
 
             /* Improve mobile UI elements */
@@ -250,14 +226,14 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 40px;
-            cursor: pointer;
-            z-index: 1000;
-            display: none;
-            background: none;
+            font-size: 24px;
             border: none;
-            padding: 0;
-            transition: transform 0.2s ease;
+            background: none;
+            color: white;
+            cursor: pointer;
+            display: none;
+            z-index: 1000;
+            transition: all 0.3s ease;
         }
 
         #train-button:hover {
@@ -265,7 +241,7 @@
         }
 
         #train-button:active {
-            transform: translateX(-50%) scale(0.9);
+            transform: translateX(-50%) scale(0.95);
         }
 
         .artwork-description {
@@ -295,7 +271,6 @@
 <body>
     <div id="scene-container"></div>
     <div id="center-dot"></div>
-    <div id="joystick"></div>
     <button id="train-button" title="Board/Exit Train">🚂🅴</button>
     <div id="welcome-popup" class="visible">
         <h1 class="welcome-title">Entropy Emergence through Repetition</h1>
@@ -1111,14 +1086,14 @@
             const trainButton = document.getElementById('train-button');
             
             function updateTrainButton() {
-                const playerPos = camera.position;
-                let nearestCart = null;
-                let shortestDistance = Infinity;
-
                 if (!trainSystem || !trainSystem.carts || trainSystem.carts.length === 0) {
                     trainButton.style.display = 'none';
                     return;
                 }
+
+                const playerPos = camera.position;
+                let nearestCart = null;
+                let shortestDistance = Infinity;
 
                 trainSystem.carts.forEach(cart => {
                     if (!cart) return;
@@ -1135,31 +1110,17 @@
                     }
                 });
 
-                if (shortestDistance < 3) {
+                if (shortestDistance < 3 && nearestCart) {
                     trainButton.style.display = 'block';
                 } else {
                     trainButton.style.display = 'none';
                 }
             }
 
-            // Add click handler for train button
-            trainButton.addEventListener('click', handleTrainInteraction);
-
-            // Add keyboard event listener for 'E' key
-            document.addEventListener('keydown', (event) => {
-                if (event.code === 'KeyE') {
-                    handleTrainInteraction();
-                }
-            });
-
             function handleTrainInteraction() {
                 const playerPos = camera.position;
                 let nearestCart = null;
                 let shortestDistance = Infinity;
-
-                if (!trainSystem || !trainSystem.carts || trainSystem.carts.length === 0) {
-                    return;
-                }
 
                 trainSystem.carts.forEach(cart => {
                     if (!cart) return;
@@ -1197,7 +1158,16 @@
                     }
                 }
             }
-            
+
+            // Add event listeners for both key and button
+            document.addEventListener('keydown', (event) => {
+                if (event.code === 'KeyE') {
+                    handleTrainInteraction();
+                }
+            });
+
+            trainButton.addEventListener('click', handleTrainInteraction);
+
         // Add performance monitoring
         let frameCount = 0;
         let lastFPSUpdate = performance.now();
@@ -1232,6 +1202,7 @@
             // Update train system
             if (trainSystem) {
                 trainSystem.update();
+                updateTrainButton();  // Add this line to update button visibility
             }
             
             // Update camera position if on train
@@ -1241,12 +1212,13 @@
             
             // Update movement if active
             if (camera.userData.movement && time - lastMovementUpdate >= MOVEMENT_UPDATE_INTERVAL) {
-                const speed = 0.5;
+                const speed = 0.5; // Base movement speed
                 const movement = camera.userData.movement;
                 
+                // Update camera position based on stored movement values
                 camera.position.x += movement.x * speed * movement.distance;
                 camera.position.z += movement.z * speed * movement.distance;
-                camera.position.y = 0.8;
+                camera.position.y = 0.8; // Keep constant height
                 
                 lastMovementUpdate = time;
             }
@@ -1254,109 +1226,211 @@
             // Update controls with mobile input
             galleryControls.update();
             
-            // Update train button visibility
-            updateTrainButton();
-            
             renderer.render(scene, camera);
         }
         
-        animate();
-
-        // Add mobile touch controls
-        const joystick = document.getElementById('joystick');
-        let joystickActive = false;
-        let joystickStartX = 0;
-        let joystickStartY = 0;
-        let joystickCurrentX = 0;
-        let joystickCurrentY = 0;
-
-        joystick.addEventListener('touchstart', (e) => {
-            joystickActive = true;
-            const touch = e.touches[0];
-            const rect = joystick.getBoundingClientRect();
-            joystickStartX = touch.clientX - rect.left;
-            joystickStartY = touch.clientY - rect.top;
-            joystickCurrentX = joystickStartX;
-            joystickCurrentY = joystickStartY;
-        });
-
-        document.addEventListener('touchmove', (e) => {
-            if (!joystickActive) return;
-            const touch = e.touches[0];
-            const rect = joystick.getBoundingClientRect();
-            joystickCurrentX = touch.clientX - rect.left;
-            joystickCurrentY = touch.clientY - rect.top;
-
-            // Calculate movement direction
-            const dx = joystickCurrentX - joystickStartX;
-            const dy = joystickCurrentY - joystickStartY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const maxDistance = 50;
-
-            if (distance > maxDistance) {
-                const angle = Math.atan2(dy, dx);
-                joystickCurrentX = joystickStartX + Math.cos(angle) * maxDistance;
-                joystickCurrentY = joystickStartY + Math.sin(angle) * maxDistance;
-            }
-
-            // Update camera movement
-            const moveX = (joystickCurrentX - joystickStartX) / maxDistance;
-            const moveZ = (joystickCurrentY - joystickStartY) / maxDistance;
-            
-            if (camera.userData.movement) {
-                camera.userData.movement.x = moveX;
-                camera.userData.movement.z = moveZ;
-                camera.userData.movement.distance = Math.min(1, distance / maxDistance);
-            }
-        });
-
-        document.addEventListener('touchend', () => {
-            joystickActive = false;
-            joystickCurrentX = joystickStartX;
-            joystickCurrentY = joystickStartY;
-            if (camera.userData.movement) {
-                camera.userData.movement.x = 0;
-                camera.userData.movement.z = 0;
-                camera.userData.movement.distance = 0;
-            }
-        });
-
-        // Add touch controls for camera rotation
+        // Track multiple touches
+        let activeTouches = new Map();
         let touchStartX = 0;
         let touchStartY = 0;
-        let isRotating = false;
+        let isTouching = false;
+        const touchAreaRadius = 100; // Radius of the circular touch areas
+        const touchAreaMargin = 20; // Margin from screen edges
 
-        document.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) {
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-                isRotating = true;
+        // Create visual indicators for touch areas
+        const cameraTouchArea = document.createElement('div');
+        cameraTouchArea.style.cssText = `
+            position: fixed;
+            bottom: ${touchAreaMargin}px;
+            right: ${touchAreaMargin}px;
+            width: ${touchAreaRadius * 2}px;
+            height: ${touchAreaRadius * 2}px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        `;
+        document.body.appendChild(cameraTouchArea);
+
+        const movementTouchArea = document.createElement('div');
+        movementTouchArea.style.cssText = `
+            position: fixed;
+            bottom: ${touchAreaMargin}px;
+            left: ${touchAreaMargin}px;
+            width: ${touchAreaRadius * 2}px;
+            height: ${touchAreaRadius * 2}px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        `;
+        document.body.appendChild(movementTouchArea);
+
+        // Show indicators on mobile devices
+        if (isMobile) {
+            cameraTouchArea.style.display = 'block';
+            movementTouchArea.style.display = 'block';
+        }
+
+        // Helper function to check if touch is within the camera control area
+        function isTouchInCameraArea(touchX, touchY) {
+            const centerX = window.innerWidth - touchAreaMargin - touchAreaRadius;
+            const centerY = window.innerHeight - touchAreaMargin - touchAreaRadius;
+            const distance = Math.sqrt(
+                Math.pow(touchX - centerX, 2) + 
+                Math.pow(touchY - centerY, 2)
+            );
+            return distance <= touchAreaRadius;
+        }
+
+        // Helper function to check if touch is within the movement control area
+        function isTouchInMovementArea(touchX, touchY) {
+            const centerX = touchAreaMargin + touchAreaRadius;
+            const centerY = window.innerHeight - touchAreaMargin - touchAreaRadius;
+            const distance = Math.sqrt(
+                Math.pow(touchX - centerX, 2) + 
+                Math.pow(touchY - centerY, 2)
+            );
+            return distance <= touchAreaRadius;
+        }
+
+        document.addEventListener('touchstart', (event) => {
+            // Prevent default touch behavior
+                    event.preventDefault();
+            
+            // Handle each new touch
+            for (const touch of event.touches) {
+                const touchId = touch.identifier;
+                
+                // Determine which area is being touched
+                if (isTouchInMovementArea(touch.clientX, touch.clientY)) {
+                    activeTouches.set(touchId, {
+                        type: 'movement',
+                        startX: touch.clientX,
+                        startY: touch.clientY,
+                        currentX: touch.clientX,
+                        currentY: touch.clientY
+                    });
+                    movementTouchArea.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+                    if (!galleryControls.isLocked) {
+                        galleryControls.lock();
+                    }
+                } else if (isTouchInCameraArea(touch.clientX, touch.clientY)) {
+                    activeTouches.set(touchId, {
+                        type: 'camera',
+                        startX: touch.clientX,
+                        startY: touch.clientY,
+                        currentX: touch.clientX,
+                        currentY: touch.clientY
+                    });
+                    if (!galleryControls.isLocked) {
+                        galleryControls.lock();
+                    }
+                    cameraTouchArea.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+                }
             }
         });
 
-        document.addEventListener('touchmove', (e) => {
-            if (!isRotating || e.touches.length !== 1) return;
+        document.addEventListener('touchmove', (event) => {
+            // Prevent default touch behavior
+            event.preventDefault();
             
-            const touchX = e.touches[0].clientX;
-            const touchY = e.touches[0].clientY;
-            
-            const deltaX = touchX - touchStartX;
-            const deltaY = touchY - touchStartY;
-            
-            // Rotate camera based on touch movement
-            camera.rotation.y -= deltaX * 0.01;
-            camera.rotation.x -= deltaY * 0.01;
-            
-            // Clamp vertical rotation
-            camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
-            
-            touchStartX = touchX;
-            touchStartY = touchY;
+            // Handle each active touch
+            for (const touch of event.touches) {
+                const touchId = touch.identifier;
+                const touchData = activeTouches.get(touchId);
+                
+                if (!touchData) continue;
+                
+                // Update current position
+                touchData.currentX = touch.clientX;
+                touchData.currentY = touch.clientY;
+                
+                // Calculate delta movement
+                const deltaX = touchData.currentX - touchData.startX;
+                const deltaY = touchData.currentY - touchData.startY;
+                
+                if (touchData.type === 'movement') {
+                    // Calculate movement direction based on touch position relative to center
+                    const centerX = touchAreaMargin + touchAreaRadius;
+                    const centerY = window.innerHeight - touchAreaMargin - touchAreaRadius;
+                    const relativeX = touchData.currentX - centerX;
+                    const relativeY = touchData.currentY - centerY;
+                    
+                    // Calculate angle from center to touch position (flipped horizontally)
+                    const angle = -Math.atan2(relativeY, relativeX);  // Added negative sign to flip horizontally
+                    
+                    // Calculate distance from center (0 to 1)
+                    const distance = Math.min(1, Math.sqrt(relativeX * relativeX + relativeY * relativeY) / touchAreaRadius);
+                    
+                    // Get camera's forward direction
+                    const cameraForward = new THREE.Vector3(0, 0, -1);
+                    cameraForward.applyQuaternion(camera.quaternion);
+                    
+                    // Create a vector perpendicular to camera's forward direction
+                    const cameraRight = new THREE.Vector3(1, 0, 0);
+                    cameraRight.applyQuaternion(camera.quaternion);
+                    
+                    // Calculate movement direction relative to camera
+                    const moveX = Math.cos(angle) * cameraRight.x + Math.sin(angle) * cameraForward.x;
+                    const moveZ = Math.cos(angle) * cameraRight.z + Math.sin(angle) * cameraForward.z;
+                    
+                    // Normalize the movement vector
+                    const moveLength = Math.sqrt(moveX * moveX + moveZ * moveZ);
+                    const normalizedMoveX = moveX / moveLength;
+                    const normalizedMoveZ = moveZ / moveLength;
+                    
+                    // Store the movement values for the animation loop
+                    camera.userData.movement = {
+                        x: normalizedMoveX,
+                        z: normalizedMoveZ,
+                        distance: distance
+                    };
+                } else if (touchData.type === 'camera') {
+                    // Update camera rotation
+                    galleryControls.euler.setFromQuaternion(galleryControls.camera.quaternion);
+                    galleryControls.euler.y -= deltaX * galleryControls.lookSpeed * 2;
+                    galleryControls.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, 
+                        galleryControls.euler.x - deltaY * galleryControls.lookSpeed * 2));
+                    galleryControls.camera.quaternion.setFromEuler(galleryControls.euler);
+                }
+                
+                // Update start position for next delta calculation
+                touchData.startX = touchData.currentX;
+                touchData.startY = touchData.currentY;
+            }
         });
 
-        document.addEventListener('touchend', () => {
-            isRotating = false;
+        document.addEventListener('touchend', (event) => {
+            // Remove ended touches
+            for (const touch of event.changedTouches) {
+                const touchId = touch.identifier;
+                const touchData = activeTouches.get(touchId);
+                
+                if (touchData) {
+                    if (touchData.type === 'movement') {
+                        movementTouchArea.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                    } else if (touchData.type === 'camera') {
+                        cameraTouchArea.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                    }
+                    activeTouches.delete(touchId);
+                }
+            }
+            
+            // Clear movement data if no movement touches remain
+            if (!Array.from(activeTouches.values()).some(touch => touch.type === 'movement')) {
+                camera.userData.movement = null;
+            }
+            
+            // Unlock controls if no touches remain
+            if (activeTouches.size === 0 && galleryControls.isLocked) {
+                galleryControls.unlock();
+            }
         });
+        
+            animate();
     </script>
 </body>
 </html>
