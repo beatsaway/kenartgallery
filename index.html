@@ -1336,7 +1336,6 @@
         document.addEventListener('touchmove', (event) => {
             // Prevent default touch behavior
             event.preventDefault();
-            if (camera.userData.onTrain) return;
             // Handle each active touch
             for (const touch of event.touches) {
                 const touchId = touch.identifier;
@@ -1352,7 +1351,7 @@
                 const deltaX = touchData.currentX - touchData.startX;
                 const deltaY = touchData.currentY - touchData.startY;
                 
-                if (touchData.type === 'movement') {
+                if (touchData.type === 'movement' && !camera.userData.onTrain) {
                     // Calculate movement direction based on touch position relative to center
                     const centerX = touchAreaMargin + touchAreaRadius;
                     const centerY = window.innerHeight - touchAreaMargin - touchAreaRadius;
