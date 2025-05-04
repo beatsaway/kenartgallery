@@ -208,6 +208,37 @@
                 transform: translateX(-50%);
                 right: auto;
             }
+
+            /* Add train boarding button */
+            #train-button {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                width: 60px;
+                height: 60px;
+                background: rgba(255, 255, 255, 0.8);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                color: #333;
+                cursor: pointer;
+                z-index: 1000;
+                border: 2px solid rgba(0, 0, 0, 0.2);
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+
+            #train-button.visible {
+                opacity: 1;
+            }
+
+            #train-button.active {
+                background: rgba(76, 175, 80, 0.8);
+                color: white;
+            }
         }
 
         #center-dot {
@@ -247,6 +278,7 @@
 <body>
     <div id="scene-container"></div>
     <div id="center-dot"></div>
+    <div id="train-button">🚂</div>
     <div id="welcome-popup" class="visible">
         <h1 class="welcome-title">Entropy Emergence through Repetition</h1>
         <div class="artist-credit">
@@ -1074,56 +1106,107 @@
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
             
-            // Add train boarding event listener
-            document.addEventListener('keydown', (event) => {
-                if (event.code === 'KeyE') {
-                    const playerPos = camera.position;
-                    let nearestCart = null;
-                    let shortestDistance = Infinity;
+        // Add train boarding event listener
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'KeyE') {
+                handleTrainBoarding();
+            }
+        });
 
-                    // Check if train system and carts exist
-                    if (!trainSystem || !trainSystem.carts || trainSystem.carts.length === 0) {
-                        return;
-                    }
+        // Add mobile train button click handler
+        const trainButton = document.getElementById('train-button');
+        trainButton.addEventListener('click', handleTrainBoarding);
 
-                    trainSystem.carts.forEach(cart => {
-                        if (!cart) return;
-                        
-                        const cartPos = cart.position;
-                        const distance = Math.sqrt(
-                            Math.pow(playerPos.x - cartPos.x, 2) +
-                            Math.pow(playerPos.z - cartPos.z, 2)
-                        );
+        function handleTrainBoarding() {
+            const playerPos = camera.position;
+            let nearestCart = null;
+            let shortestDistance = Infinity;
 
-                        if (distance < shortestDistance) {
-                            shortestDistance = distance;
-                            nearestCart = cart;
-                        }
-                    });
+            // Check if train system and carts exist
+            if (!trainSystem || !trainSystem.carts || trainSystem.carts.length === 0) {
+                return;
+            }
 
-                    if (shortestDistance < 3 && nearestCart) {  // Check if nearestCart exists
-                        if (!camera.userData.onTrain) {
-                            // Board train
-                            camera.userData.onTrain = nearestCart;
-                            camera.position.x = nearestCart.position.x + 0.5;
-                            camera.position.y = nearestCart.position.y + 1.2;
-                            camera.position.z = nearestCart.position.z;
-                            if (artworkInfoElement) {
-                            artworkInfoElement.innerHTML = "<strong>Press E to exit train</strong>";
-                            artworkInfoElement.style.display = 'block';
-                            }
-                        } else {
-                            // Exit train
-                            camera.userData.onTrain = null;
-                            camera.position.x = nearestCart.position.x + 2;
-                            if (artworkInfoElement) {
-                            artworkInfoElement.style.display = 'none';
-                            }
-                        }
-                    }
+            trainSystem.carts.forEach(cart => {
+                if (!cart) return;
+                
+                const cartPos = cart.position;
+                const distance = Math.sqrt(
+                    Math.pow(playerPos.x - cartPos.x, 2) +
+                    Math.pow(playerPos.z - cartPos.z, 2)
+                );
+
+                if (distance < shortestDistance) {
+                    shortestDistance = distance;
+                    nearestCart = cart;
                 }
             });
+
+            // Show/hide train button based on proximity or if already on train
+            const trainButton = document.getElementById('train-button');
+            if (shortestDistance < 3 || camera.userData.onTrain) {
+                trainButton.classList.add('visible');
+            } else {
+                trainButton.classList.remove('visible');
+                trainButton.classList.remove('active');
+            }
+
+            if (shortestDistance < 3 && nearestCart) {
+                if (!camera.userData.onTrain) {
+                    // Board train
+                    camera.userData.onTrain = nearestCart;
+                    camera.position.x = nearestCart.position.x + 0.5;
+                    camera.position.y = nearestCart.position.y + 1.2;
+                    camera.position.z = nearestCart.position.z;
+                    if (artworkInfoElement) {
+                        artworkInfoElement.innerHTML = "<strong>Tap 🚂 to exit train</strong>";
+                        artworkInfoElement.style.display = 'block';
+                    }
+                    trainButton.classList.add('active');
+                } else {
+                    // Exit train
+                    camera.userData.onTrain = null;
+                    camera.position.x = nearestCart.position.x + 2;
+                    if (artworkInfoElement) {
+                        artworkInfoElement.style.display = 'none';
+                    }
+                    trainButton.classList.remove('active');
+                }
+            }
+        }
+        
+        // Add periodic check for train proximity
+        function checkTrainProximity() {
+            if (!isMobile) return; // Only check on mobile
             
+            const playerPos = camera.position;
+            let shortestDistance = Infinity;
+
+            if (trainSystem && trainSystem.carts) {
+                trainSystem.carts.forEach(cart => {
+                    if (!cart) return;
+                    
+                    const cartPos = cart.position;
+                    const distance = Math.sqrt(
+                        Math.pow(playerPos.x - cartPos.x, 2) +
+                        Math.pow(playerPos.z - cartPos.z, 2)
+                    );
+
+                    if (distance < shortestDistance) {
+                        shortestDistance = distance;
+                    }
+                });
+            }
+
+            const trainButton = document.getElementById('train-button');
+            if (shortestDistance < 3 || camera.userData.onTrain) {
+                trainButton.classList.add('visible');
+            } else {
+                trainButton.classList.remove('visible');
+                trainButton.classList.remove('active');
+            }
+        }
+
         // Add performance monitoring
         let frameCount = 0;
         let lastFPSUpdate = performance.now();
@@ -1164,6 +1247,9 @@
             if (camera.userData.onTrain) {
                 camera.position.z = camera.userData.onTrain.position.z;
             }
+            
+            // Check train proximity for mobile
+            checkTrainProximity();
             
             // Update movement if active
             if (camera.userData.movement && time - lastMovementUpdate >= MOVEMENT_UPDATE_INTERVAL) {
