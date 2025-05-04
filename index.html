@@ -208,38 +208,6 @@
                 transform: translateX(-50%);
                 right: auto;
             }
-
-            /* Add train boarding button */
-            #train-button {
-                position: fixed;
-                bottom: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 60px;
-                height: 60px;
-                background: rgba(255, 255, 255, 0.8);
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 24px;
-                color: #333;
-                cursor: pointer;
-                z-index: 1000;
-                border: 2px solid rgba(0, 0, 0, 0.2);
-                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                opacity: 0;
-                transition: opacity 0.3s ease;
-            }
-
-            #train-button.visible {
-                opacity: 1;
-            }
-
-            #train-button.active {
-                background: rgba(76, 175, 80, 0.8);
-                color: white;
-            }
         }
 
         #center-dot {
@@ -252,6 +220,30 @@
             background-color: black;
             z-index: 1000;
         }
+
+        #train-button {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 40px;
+            cursor: pointer;
+            z-index: 1000;
+            display: none;
+            background: none;
+            border: none;
+            padding: 0;
+            transition: transform 0.2s ease;
+        }
+
+        #train-button:hover {
+            transform: translateX(-50%) scale(1.1);
+        }
+
+        #train-button:active {
+            transform: translateX(-50%) scale(0.9);
+        }
+
         .artwork-description {
             position: fixed;
             bottom: 20px;
@@ -279,7 +271,7 @@
 <body>
     <div id="scene-container"></div>
     <div id="center-dot"></div>
-    <div id="train-button">🚂</div>
+    <button id="train-button" title="Board/Exit Train">🚂🅴</button>
     <div id="welcome-popup" class="visible">
         <h1 class="welcome-title">Entropy Emergence through Repetition</h1>
         <div class="artist-credit">
@@ -543,18 +535,15 @@
             // Floor with meadow appearance
             createFloor();
 
-            // Ceiling as a single large plane
+            // Ceiling as a single large plane with basic material
             const ceilingGeometry = new THREE.PlaneGeometry(scene.userData.galleryWidth, scene.userData.galleryLength);
-            const ceilingMaterial = new THREE.MeshStandardMaterial({
+            const ceilingMaterial = new THREE.MeshBasicMaterial({
                 color: 0xffffff,
-                roughness: 0.5,
-                metalness: 0.1,
                 side: THREE.DoubleSide
             });
             const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
             ceiling.position.y = scene.userData.galleryHeight;
             ceiling.rotation.x = Math.PI / 2;
-            ceiling.receiveShadow = true;
             scene.add(ceiling);
 
             // Walls
@@ -603,10 +592,9 @@
         crateTexture.wrapT = THREE.RepeatWrapping;
 
         function createWalls() {
-            const wallMaterial = new THREE.MeshStandardMaterial({
+            // Create a simple white material for walls
+            const wallMaterial = new THREE.MeshBasicMaterial({
                 color: 0xffffff,
-                roughness: 0.5,
-                metalness: 0.1,
                 side: THREE.DoubleSide
             });
 
@@ -616,7 +604,6 @@
                 wallMaterial
             );
             backWall.position.set(0, scene.userData.galleryHeight/2, -scene.userData.galleryLength/2);
-            backWall.receiveShadow = true;
             scene.add(backWall);
 
             // Create side walls
@@ -627,7 +614,6 @@
             leftWall.position.x = -scene.userData.galleryWidth/2;
             leftWall.position.y = scene.userData.galleryHeight/2;
             leftWall.rotation.y = Math.PI/2;
-            leftWall.receiveShadow = true;
             scene.add(leftWall);
 
             const rightWall = new THREE.Mesh(
@@ -637,7 +623,6 @@
             rightWall.position.x = scene.userData.galleryWidth/2;
             rightWall.position.y = scene.userData.galleryHeight/2;
             rightWall.rotation.y = -Math.PI/2;
-            rightWall.receiveShadow = true;
             scene.add(rightWall);
 
             // Create front wall
@@ -646,7 +631,6 @@
                 wallMaterial
             );
             frontWall.position.set(0, scene.userData.galleryHeight/2, scene.userData.galleryLength/2);
-            frontWall.receiveShadow = true;
             scene.add(frontWall);
         }
         
@@ -1098,83 +1082,19 @@
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
             
-        // Add train boarding event listener
-        document.addEventListener('keydown', (event) => {
-            if (event.code === 'KeyE') {
-                handleTrainBoarding();
-            }
-        });
-
-        // Add mobile train button click handler
-        const trainButton = document.getElementById('train-button');
-        trainButton.addEventListener('click', handleTrainBoarding);
-
-        function handleTrainBoarding() {
-            const playerPos = camera.position;
-            let nearestCart = null;
-            let shortestDistance = Infinity;
-
-            // Check if train system and carts exist
-            if (!trainSystem || !trainSystem.carts || trainSystem.carts.length === 0) {
-                return;
-            }
-
-            trainSystem.carts.forEach(cart => {
-                if (!cart) return;
-                
-                const cartPos = cart.position;
-                const distance = Math.sqrt(
-                    Math.pow(playerPos.x - cartPos.x, 2) +
-                    Math.pow(playerPos.z - cartPos.z, 2)
-                );
-
-                if (distance < shortestDistance) {
-                    shortestDistance = distance;
-                    nearestCart = cart;
-                }
-            });
-
-            // Show/hide train button based on proximity or if already on train
+            // Add train boarding event listener
             const trainButton = document.getElementById('train-button');
-            if (shortestDistance < 3 || camera.userData.onTrain) {
-                trainButton.classList.add('visible');
-            } else {
-                trainButton.classList.remove('visible');
-                trainButton.classList.remove('active');
-            }
-
-            if (shortestDistance < 3 && nearestCart) {
-                if (!camera.userData.onTrain) {
-                    // Board train
-                    camera.userData.onTrain = nearestCart;
-                    camera.position.x = nearestCart.position.x + 0.5;
-                    camera.position.y = nearestCart.position.y + 1.2;
-                    camera.position.z = nearestCart.position.z;
-                    if (artworkInfoElement) {
-                        artworkInfoElement.innerHTML = "<strong>Tap 🚂 to exit train</strong>";
-                        artworkInfoElement.style.display = 'block';
-                    }
-                    trainButton.classList.add('active');
-                } else {
-                    // Exit train
-                    camera.userData.onTrain = null;
-                    camera.position.x = nearestCart.position.x + 2;
-                    if (artworkInfoElement) {
-                        artworkInfoElement.style.display = 'none';
-                    }
-                    trainButton.classList.remove('active');
-                }
-            }
-        }
-        
-        // Add periodic check for train proximity
-        function checkTrainProximity() {
-            if (!isMobile) return; // Only check on mobile
             
-            const playerPos = camera.position;
-            let shortestDistance = Infinity;
+            function updateTrainButton() {
+                const playerPos = camera.position;
+                let nearestCart = null;
+                let shortestDistance = Infinity;
 
-            if (trainSystem && trainSystem.carts) {
+                if (!trainSystem || !trainSystem.carts || trainSystem.carts.length === 0) {
+                    trainButton.style.display = 'none';
+                    return;
+                }
+
                 trainSystem.carts.forEach(cart => {
                     if (!cart) return;
                     
@@ -1186,19 +1106,73 @@
 
                     if (distance < shortestDistance) {
                         shortestDistance = distance;
+                        nearestCart = cart;
                     }
                 });
+
+                if (shortestDistance < 3) {
+                    trainButton.style.display = 'block';
+                } else {
+                    trainButton.style.display = 'none';
+                }
             }
 
-            const trainButton = document.getElementById('train-button');
-            if (shortestDistance < 3 || camera.userData.onTrain) {
-                trainButton.classList.add('visible');
-            } else {
-                trainButton.classList.remove('visible');
-                trainButton.classList.remove('active');
-            }
-        }
+            // Add click handler for train button
+            trainButton.addEventListener('click', handleTrainInteraction);
 
+            // Add keyboard event listener for 'E' key
+            document.addEventListener('keydown', (event) => {
+                if (event.code === 'KeyE') {
+                    handleTrainInteraction();
+                }
+            });
+
+            function handleTrainInteraction() {
+                const playerPos = camera.position;
+                let nearestCart = null;
+                let shortestDistance = Infinity;
+
+                if (!trainSystem || !trainSystem.carts || trainSystem.carts.length === 0) {
+                    return;
+                }
+
+                trainSystem.carts.forEach(cart => {
+                    if (!cart) return;
+                    
+                    const cartPos = cart.position;
+                    const distance = Math.sqrt(
+                        Math.pow(playerPos.x - cartPos.x, 2) +
+                        Math.pow(playerPos.z - cartPos.z, 2)
+                    );
+
+                    if (distance < shortestDistance) {
+                        shortestDistance = distance;
+                        nearestCart = cart;
+                    }
+                });
+
+                if (shortestDistance < 3 && nearestCart) {
+                    if (!camera.userData.onTrain) {
+                        // Board train
+                        camera.userData.onTrain = nearestCart;
+                        camera.position.x = nearestCart.position.x + 0.5;
+                        camera.position.y = nearestCart.position.y + 1.2;
+                        camera.position.z = nearestCart.position.z;
+                        if (artworkInfoElement) {
+                            artworkInfoElement.innerHTML = "<strong>Press E to exit train</strong>";
+                            artworkInfoElement.style.display = 'block';
+                        }
+                    } else {
+                        // Exit train
+                        camera.userData.onTrain = null;
+                        camera.position.x = nearestCart.position.x + 2;
+                        if (artworkInfoElement) {
+                            artworkInfoElement.style.display = 'none';
+                        }
+                    }
+                }
+            }
+            
         // Add performance monitoring
         let frameCount = 0;
         let lastFPSUpdate = performance.now();
@@ -1240,18 +1214,14 @@
                 camera.position.z = camera.userData.onTrain.position.z;
             }
             
-            // Check train proximity for mobile
-            checkTrainProximity();
-            
             // Update movement if active
             if (camera.userData.movement && time - lastMovementUpdate >= MOVEMENT_UPDATE_INTERVAL) {
-                const speed = 0.5; // Base movement speed
+                const speed = 0.5;
                 const movement = camera.userData.movement;
                 
-                // Update camera position based on stored movement values
                 camera.position.x += movement.x * speed * movement.distance;
                 camera.position.z += movement.z * speed * movement.distance;
-                camera.position.y = 0.8; // Keep constant height
+                camera.position.y = 0.8;
                 
                 lastMovementUpdate = time;
             }
@@ -1259,211 +1229,13 @@
             // Update controls with mobile input
             galleryControls.update();
             
+            // Update train button visibility
+            updateTrainButton();
+            
             renderer.render(scene, camera);
         }
         
-        // Track multiple touches
-        let activeTouches = new Map();
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let isTouching = false;
-        const touchAreaRadius = 100; // Radius of the circular touch areas
-        const touchAreaMargin = 20; // Margin from screen edges
-
-        // Create visual indicators for touch areas
-        const cameraTouchArea = document.createElement('div');
-        cameraTouchArea.style.cssText = `
-            position: fixed;
-            bottom: ${touchAreaMargin}px;
-            right: ${touchAreaMargin}px;
-            width: ${touchAreaRadius * 2}px;
-            height: ${touchAreaRadius * 2}px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 1000;
-            display: none;
-        `;
-        document.body.appendChild(cameraTouchArea);
-
-        const movementTouchArea = document.createElement('div');
-        movementTouchArea.style.cssText = `
-            position: fixed;
-            bottom: ${touchAreaMargin}px;
-            left: ${touchAreaMargin}px;
-            width: ${touchAreaRadius * 2}px;
-            height: ${touchAreaRadius * 2}px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 1000;
-            display: none;
-        `;
-        document.body.appendChild(movementTouchArea);
-
-        // Show indicators on mobile devices
-        if (isMobile) {
-            cameraTouchArea.style.display = 'block';
-            movementTouchArea.style.display = 'block';
-        }
-
-        // Helper function to check if touch is within the camera control area
-        function isTouchInCameraArea(touchX, touchY) {
-            const centerX = window.innerWidth - touchAreaMargin - touchAreaRadius;
-            const centerY = window.innerHeight - touchAreaMargin - touchAreaRadius;
-            const distance = Math.sqrt(
-                Math.pow(touchX - centerX, 2) + 
-                Math.pow(touchY - centerY, 2)
-            );
-            return distance <= touchAreaRadius;
-        }
-
-        // Helper function to check if touch is within the movement control area
-        function isTouchInMovementArea(touchX, touchY) {
-            const centerX = touchAreaMargin + touchAreaRadius;
-            const centerY = window.innerHeight - touchAreaMargin - touchAreaRadius;
-            const distance = Math.sqrt(
-                Math.pow(touchX - centerX, 2) + 
-                Math.pow(touchY - centerY, 2)
-            );
-            return distance <= touchAreaRadius;
-        }
-
-        document.addEventListener('touchstart', (event) => {
-            // Prevent default touch behavior
-                    event.preventDefault();
-            
-            // Handle each new touch
-            for (const touch of event.touches) {
-                const touchId = touch.identifier;
-                
-                // Determine which area is being touched
-                if (isTouchInMovementArea(touch.clientX, touch.clientY)) {
-                    activeTouches.set(touchId, {
-                        type: 'movement',
-                        startX: touch.clientX,
-                        startY: touch.clientY,
-                        currentX: touch.clientX,
-                        currentY: touch.clientY
-                    });
-                    movementTouchArea.style.borderColor = 'rgba(255, 255, 255, 0.6)';
-                    if (!galleryControls.isLocked) {
-                        galleryControls.lock();
-                    }
-                } else if (isTouchInCameraArea(touch.clientX, touch.clientY)) {
-                    activeTouches.set(touchId, {
-                        type: 'camera',
-                        startX: touch.clientX,
-                        startY: touch.clientY,
-                        currentX: touch.clientX,
-                        currentY: touch.clientY
-                    });
-                    if (!galleryControls.isLocked) {
-                        galleryControls.lock();
-                    }
-                    cameraTouchArea.style.borderColor = 'rgba(255, 255, 255, 0.6)';
-                }
-            }
-        });
-
-        document.addEventListener('touchmove', (event) => {
-            // Prevent default touch behavior
-            event.preventDefault();
-            
-            // Handle each active touch
-            for (const touch of event.touches) {
-                const touchId = touch.identifier;
-                const touchData = activeTouches.get(touchId);
-                
-                if (!touchData) continue;
-                
-                // Update current position
-                touchData.currentX = touch.clientX;
-                touchData.currentY = touch.clientY;
-                
-                // Calculate delta movement
-                const deltaX = touchData.currentX - touchData.startX;
-                const deltaY = touchData.currentY - touchData.startY;
-                
-                if (touchData.type === 'movement') {
-                    // Calculate movement direction based on touch position relative to center
-                    const centerX = touchAreaMargin + touchAreaRadius;
-                    const centerY = window.innerHeight - touchAreaMargin - touchAreaRadius;
-                    const relativeX = touchData.currentX - centerX;
-                    const relativeY = touchData.currentY - centerY;
-                    
-                    // Calculate angle from center to touch position (flipped horizontally)
-                    const angle = -Math.atan2(relativeY, relativeX);  // Added negative sign to flip horizontally
-                    
-                    // Calculate distance from center (0 to 1)
-                    const distance = Math.min(1, Math.sqrt(relativeX * relativeX + relativeY * relativeY) / touchAreaRadius);
-                    
-                    // Get camera's forward direction
-                    const cameraForward = new THREE.Vector3(0, 0, -1);
-                    cameraForward.applyQuaternion(camera.quaternion);
-                    
-                    // Create a vector perpendicular to camera's forward direction
-                    const cameraRight = new THREE.Vector3(1, 0, 0);
-                    cameraRight.applyQuaternion(camera.quaternion);
-                    
-                    // Calculate movement direction relative to camera
-                    const moveX = Math.cos(angle) * cameraRight.x + Math.sin(angle) * cameraForward.x;
-                    const moveZ = Math.cos(angle) * cameraRight.z + Math.sin(angle) * cameraForward.z;
-                    
-                    // Normalize the movement vector
-                    const moveLength = Math.sqrt(moveX * moveX + moveZ * moveZ);
-                    const normalizedMoveX = moveX / moveLength;
-                    const normalizedMoveZ = moveZ / moveLength;
-                    
-                    // Store the movement values for the animation loop
-                    camera.userData.movement = {
-                        x: normalizedMoveX,
-                        z: normalizedMoveZ,
-                        distance: distance
-                    };
-                } else if (touchData.type === 'camera') {
-                    // Update camera rotation
-                    galleryControls.euler.setFromQuaternion(galleryControls.camera.quaternion);
-                    galleryControls.euler.y -= deltaX * galleryControls.lookSpeed * 2;
-                    galleryControls.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, 
-                        galleryControls.euler.x - deltaY * galleryControls.lookSpeed * 2));
-                    galleryControls.camera.quaternion.setFromEuler(galleryControls.euler);
-                }
-                
-                // Update start position for next delta calculation
-                touchData.startX = touchData.currentX;
-                touchData.startY = touchData.currentY;
-            }
-        });
-
-        document.addEventListener('touchend', (event) => {
-            // Remove ended touches
-            for (const touch of event.changedTouches) {
-                const touchId = touch.identifier;
-                const touchData = activeTouches.get(touchId);
-                
-                if (touchData) {
-                    if (touchData.type === 'movement') {
-                        movementTouchArea.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                    } else if (touchData.type === 'camera') {
-                        cameraTouchArea.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                    }
-                    activeTouches.delete(touchId);
-                }
-            }
-            
-            // Clear movement data if no movement touches remain
-            if (!Array.from(activeTouches.values()).some(touch => touch.type === 'movement')) {
-                camera.userData.movement = null;
-            }
-            
-            // Unlock controls if no touches remain
-            if (activeTouches.size === 0 && galleryControls.isLocked) {
-                galleryControls.unlock();
-            }
-        });
-        
-            animate();
+        animate();
     </script>
 </body>
 </html>
