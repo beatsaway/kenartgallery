@@ -213,7 +213,8 @@
             #train-button {
                 position: fixed;
                 bottom: 20px;
-                right: 20px;
+                left: 50%;
+                transform: translateX(-50%);
                 width: 60px;
                 height: 60px;
                 background: rgba(255, 255, 255, 0.8);
@@ -545,14 +546,11 @@
             // Ceiling as a single large plane
             const ceilingGeometry = new THREE.PlaneGeometry(scene.userData.galleryWidth, scene.userData.galleryLength);
             const ceilingMaterial = new THREE.MeshStandardMaterial({
-                map: baseWoodTexture.clone(),
-                roughness: 0.8,
-                metalness: 0.2,
+                color: 0xffffff,
+                roughness: 0.5,
+                metalness: 0.1,
                 side: THREE.DoubleSide
             });
-            ceilingMaterial.map.wrapS = THREE.RepeatWrapping;
-            ceilingMaterial.map.wrapT = THREE.RepeatWrapping;
-            ceilingMaterial.map.repeat.set(1, 3); // Adjust as needed
             const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
             ceiling.position.y = scene.userData.galleryHeight;
             ceiling.rotation.x = Math.PI / 2;
@@ -605,12 +603,10 @@
         crateTexture.wrapT = THREE.RepeatWrapping;
 
         function createWalls() {
-            const wallTexture = baseWoodTexture.clone();
-            wallTexture.repeat.set(20, 1);
             const wallMaterial = new THREE.MeshStandardMaterial({
-                map: wallTexture,
-                roughness: 0.8,
-                metalness: 0.2,
+                color: 0xffffff,
+                roughness: 0.5,
+                metalness: 0.1,
                 side: THREE.DoubleSide
             });
 
@@ -621,7 +617,6 @@
             );
             backWall.position.set(0, scene.userData.galleryHeight/2, -scene.userData.galleryLength/2);
             backWall.receiveShadow = true;
-            backWall.material.map.repeat.set(2, 1);
             scene.add(backWall);
 
             // Create side walls
@@ -633,7 +628,6 @@
             leftWall.position.y = scene.userData.galleryHeight/2;
             leftWall.rotation.y = Math.PI/2;
             leftWall.receiveShadow = true;
-            leftWall.material.map.repeat.set(1, 1);
             scene.add(leftWall);
 
             const rightWall = new THREE.Mesh(
@@ -644,7 +638,6 @@
             rightWall.position.y = scene.userData.galleryHeight/2;
             rightWall.rotation.y = -Math.PI/2;
             rightWall.receiveShadow = true;
-            rightWall.material.map.repeat.set(1, 1);
             scene.add(rightWall);
 
             // Create front wall
@@ -654,7 +647,6 @@
             );
             frontWall.position.set(0, scene.userData.galleryHeight/2, scene.userData.galleryLength/2);
             frontWall.receiveShadow = true;
-            frontWall.material.map.repeat.set(2, 1);
             scene.add(frontWall);
         }
         
