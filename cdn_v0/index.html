@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Art Gallery</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            touch-action: none;  /* Prevent default touch actions */
+            background: #000;
+        }
+
+        #scene-container { 
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #87CEEB, #1E90FF);
+        }
+
+        #controls-info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            font-family: 'Minecraft', monospace;
+            font-size: 14px;
+            text-shadow: 2px 2px #000;
+            background: none;
+            padding: 0;
+            border: none;
+            pointer-events: none;
+            z-index: 1000;
+            line-height: 1.4;
+        }
+
+        #controls-info p {
+            margin: 4px 0;
+        }
+
+        #artwork-info {
+            display: none;  /* Hide artwork info element */
+        }
+
+        .train-prompt {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .train-prompt.visible {
+            opacity: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .fade-out {
+            animation: fadeOut 0.5s ease forwards;
+        }
+
+        #welcome-popup {
+            position: fixed;
+            top: 40%;  /* Changed from 50% to 40% to move it higher */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 1000;
+            width: min(90%, 500px);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: auto;
+            cursor: pointer;
+            visibility: visible;
+        }
+
+        #welcome-popup.visible {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+            pointer-events: auto;
+        }
+
+        #welcome-popup.fade-out {
+            opacity: 0;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .welcome-title {
+            font-size: clamp(1.5rem, 5vw, 2rem);
+            font-weight: 500;
+            margin: 0;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            line-height: 1.3;
+        }
+
+        .artist-credit {
+            font-size: clamp(0.9rem, 3vw, 1rem);
+            color: rgba(255, 255, 255, 0.9);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .copyright {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .welcome-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .nodeco {
+            color: #4a9eff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            transition: color 0.2s ease;
+            display: inline;
+            padding: 0;
+            background: none;
+            border: none;
+        }
+
+        .nodeco:hover {
+            color: #7ab8ff;
+            text-decoration: underline;
+            transform: none;
+        }
+
+        .nodeco:active {
+            color: #2d7edb;
+        }
+
+        @media (max-width: 768px) {
+            #welcome-popup {
+                padding: 1.5rem;
+                bottom: 20%;
+            }
+
+            .welcome-title {
+                font-size: 1.5rem;
+                letter-spacing: 1.5px;
+            }
+
+            .nodeco {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Mobile Controls */
+        #joystick {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            #controls-info {
+                display: none;  /* Hide desktop controls info on mobile */
+            }
+
+            /* Improve mobile UI elements */
+            #artwork-info {
+                font-size: 16px;
+                padding: 20px;
+                max-width: 90%;
+                margin: 20px auto;
+                left: 50%;
+                transform: translateX(-50%);
+                right: auto;
+            }
+        }
+
+        #center-dot {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1px;
+            height: 1px;
+            background-color: black;
+            z-index: 1000;
+        }
+
+        #train-button {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            border: none;
+            background: none;
+            color: white;
+            cursor: pointer;
+            display: none;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        #train-button:hover {
+            transform: translateX(-50%) scale(1.1);
+        }
+
+        #train-button:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+
+        .artwork-description {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 300px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: none;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        .artwork-description h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .artwork-description p {
+            margin: 0;
+            color: #666;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="scene-container"></div>
+    <div id="center-dot"></div>
+    <button id="train-button" title="Board/Exit Train">🚂🅴</button>
+    <div id="welcome-popup" class="visible">
+        <h1 class="welcome-title">Entropy Emergence through Repetition</h1>
+        <div class="artist-credit">
+            Pen and Pencil Doodle Art Exhibition by 
+            <a href='https://www.youtube.com/@tortorken' class="nodeco">imtortorken</a>
+            <span class="copyright">© 2025</span>
+        </div>
+        <div class="welcome-links">
+            <a href='https://buymeacoffee.com/beatsaway' class="nodeco">☕ Support this artist</a>
+        </div>
+    </div>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.152.2/build/three.module.min.js",
+                "three/addons/": "https://unpkg.com/three@0.152.2/examples/jsm/"
+            }
+        }
+    </script>
+    <script src="controls.js"></script>
+    <script src="https://unpkg.com/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="gallery.js"></script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { initNPCs, updateNPCs } from './npc.js';
+        import { createRailwaySystem } from './train.js';
+        window.THREE = THREE;
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.userData.galleryWidth = 20 * 5;
+        scene.userData.galleryLength = 100 * 5;
+        scene.userData.galleryHeight = 8 * 5;
+        const wallThickness = 0.2 * 5;
+        const corridorWidth = 6 * 5;
+        // Mobile detection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // Scene setup
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: isMobile ? false : true,
+            powerPreference: isMobile ? "low-power" : "high-performance"
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('scene-container').appendChild(renderer.domElement);
+        // Movement and controls
+        const controls = new GalleryControls(camera, scene);
+        controls.setupEventListeners();
+        // Train system setup
+        const trainSystem = {
+            carts: [],
+            track: null,
+            speed: 0.05,
+            direction: 1,
+            currentPosition: 0
+        };
+        // NPCs
+        const npcCount = 24;
+        const npcs = initNPCs(scene, npcCount);
+        // Create the gallery environment
+        window.createGallery(scene);
+        createRailwaySystem(scene, camera, trainSystem);
+        const galleryControls = new GalleryControls(camera, scene);
+        setRandomInitialPosition();
+        
+        // Set initial camera position (randomly positioned in front of an artwork)
+        function setRandomInitialPosition() {
+            // Decide which wall (left or right) randomly
+            const isLeftWall = Math.random() < 0.5;
+            
+            // Calculate a random position along the wall
+            const zPos = -scene.userData.galleryLength / 2 + 10 + Math.floor(Math.random() * 9) * (8 * 5);
+            
+            // Position camera in the middle of the corridor (x = 0)
+            const xPos = 0;  // Middle of the corridor
+            
+            // Position camera
+            camera.position.set(xPos, 0.8, zPos);
+            
+            // Make camera face the chosen wall
+            if (isLeftWall) {
+                camera.lookAt(new THREE.Vector3(-scene.userData.galleryWidth / 2, 0.8, zPos));
+            } else {
+                camera.lookAt(new THREE.Vector3(scene.userData.galleryWidth / 2, 0.8, zPos));
+            }
+        }
+
+        // Add click handler to remove welcome popup when clicking anywhere
+            const welcomePopup = document.getElementById('welcome-popup');
+        document.addEventListener('click', function() {
+                welcomePopup.style.opacity = '0';
+            welcomePopup.style.transform = 'translate(-50%, -50%)';
+                setTimeout(() => {
+                    welcomePopup.style.display = 'none';
+            }, 300);
+        }, { once: true });  // The 'once: true' option ensures the event only fires once
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            
+            // Add train boarding event listener
+            const trainButton = document.getElementById('train-button');
+            
+            function updateTrainButton() {
+                if (!trainSystem || !trainSystem.carts || trainSystem.carts.length === 0) {
+                    trainButton.style.display = 'none';
+                    return;
+                }
+
+                const playerPos = camera.position;
+                let nearestCart = null;
+                let shortestDistance = Infinity;
+
+                trainSystem.carts.forEach(cart => {
+                    if (!cart) return;
+                    
+                    const cartPos = cart.position;
+                    const distance = Math.sqrt(
+                        Math.pow(playerPos.x - cartPos.x, 2) +
+                        Math.pow(playerPos.z - cartPos.z, 2)
+                    );
+
+                    if (distance < shortestDistance) {
+                        shortestDistance = distance;
+                        nearestCart = cart;
+                    }
+                });
+
+                if (shortestDistance < 3 && nearestCart) {
+                    trainButton.style.display = 'block';
+                } else {
+                    trainButton.style.display = 'none';
+                }
+            }
+
+            function handleTrainInteraction() {
+                const playerPos = camera.position;
+                let nearestCart = null;
+                let shortestDistance = Infinity;
+
+                trainSystem.carts.forEach(cart => {
+                    if (!cart) return;
+                    
+                    const cartPos = cart.position;
+                    const distance = Math.sqrt(
+                        Math.pow(playerPos.x - cartPos.x, 2) +
+                        Math.pow(playerPos.z - cartPos.z, 2)
+                    );
+
+                    if (distance < shortestDistance) {
+                        shortestDistance = distance;
+                        nearestCart = cart;
+                    }
+                });
+
+                if (shortestDistance < 3 && nearestCart) {
+                    if (!camera.userData.onTrain) {
+                        // Board train
+                        camera.userData.onTrain = nearestCart;
+                        camera.position.x = nearestCart.position.x + 0.5;
+                        camera.position.y = nearestCart.position.y + 1.2;
+                        camera.position.z = nearestCart.position.z;
+                    } else {
+                        // Exit train
+                        camera.userData.onTrain = null;
+                        camera.position.x = nearestCart.position.x + 2;
+                    }
+                }
+            }
+
+            // After all relevant variables are defined and DOM is ready:
+            setupInputHandlers(camera, galleryControls, trainButton, handleTrainInteraction, isMobile);
+
+        // Add performance monitoring
+        let frameCount = 0;
+        let lastFPSUpdate = performance.now();
+        
+        function updateFPS() {
+            const now = performance.now();
+            const delta = now - lastFPSUpdate;
+            
+            if (delta >= 1000) {
+                frameCount = 0;
+                lastFPSUpdate = now;
+            }
+        }
+        
+        // Add movement update interval tracking
+        let lastMovementUpdate = 0;
+        const MOVEMENT_UPDATE_INTERVAL = 20; // 20ms = 0.02 seconds
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (document.hidden) return;
+            
+            const time = performance.now();
+            frameCount++;
+            updateFPS();
+            
+            // Update NPCs
+            updateNPCs(npcs, scene, time);
+            
+            // Update train system
+            if (trainSystem) {
+                trainSystem.update();
+                updateTrainButton();
+            }
+            
+            // Update camera position if on train
+            if (camera.userData.onTrain) {
+                camera.position.z = camera.userData.onTrain.position.z;
+            }
+            
+            // Update movement if active
+            if (camera.userData.movement && time - lastMovementUpdate >= MOVEMENT_UPDATE_INTERVAL) {
+                const speed = 0.5; // Base movement speed
+                const movement = camera.userData.movement;
+                
+                // Update camera position based on stored movement values
+                camera.position.x += movement.x * speed * movement.distance;
+                camera.position.z += movement.z * speed * movement.distance;
+                camera.position.y = 0.8; // Keep constant height
+                
+                lastMovementUpdate = time;
+            }
+            
+            // Update controls with mobile input
+            galleryControls.update();
+            
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
