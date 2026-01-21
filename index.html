@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>3D Gallery</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0b0b0f;
+        font-family: "Segoe UI", system-ui, sans-serif;
+      }
+
+      #three-root {
+        position: fixed;
+        inset: 0;
+      }
+
+      #three-root canvas {
+        display: block;
+      }
+
+      .gallery-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 12;
+        width: 100vw;
+        box-sizing: border-box;
+        padding: 6px 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        background: rgba(12, 12, 16, 0.75);
+        color: #f8fafc;
+        font-size: 13px;
+        letter-spacing: 0.2px;
+        backdrop-filter: blur(6px);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+      }
+
+      .gallery-header-row {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .gallery-header-link {
+        color: #e2e8f0;
+        text-decoration: none;
+        font-size: 13px;
+        padding: 4px 6px;
+      }
+
+      .gallery-header button {
+        border: none;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 13px;
+        color: #e2e8f0;
+        background: rgba(71, 75, 86, 0.85);
+        cursor: pointer;
+        transition: transform 0.15s ease, background 0.15s ease;
+      }
+
+      .gallery-header button:hover {
+        transform: translateY(-1px);
+        background: rgba(86, 90, 104, 0.95);
+      }
+
+      .gallery-header button.is-active {
+        background: rgba(120, 124, 140, 0.95);
+        color: #0b0f19;
+      }
+
+      .hud {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        z-index: 10;
+        width: 100vw;
+        box-sizing: border-box;
+        padding: 8px 12px 10px;
+        background: rgba(12, 12, 16, 0.78);
+        color: #f8fafc;
+        border-radius: 0;
+        font-size: 13px;
+        letter-spacing: 0.2px;
+        backdrop-filter: blur(6px);
+        box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.35);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .hud strong {
+        display: block;
+        font-size: 15px;
+        white-space: nowrap;
+      }
+
+      .hud-slot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .hud-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .hud-row input[type="range"] {
+        flex: 1;
+        min-width: 160px;
+      }
+
+      .hud-slot.left {
+        justify-content: center;
+      }
+
+      .hud-slot.center {
+        justify-content: center;
+      }
+
+      .hud-slot.right {
+        justify-content: center;
+      }
+
+      .hud button {
+        border: none;
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 13px;
+        color: #e2e8f0;
+        background: rgba(71, 75, 86, 0.85);
+        cursor: pointer;
+        transition: transform 0.15s ease, background 0.15s ease;
+      }
+
+      .hud button:hover {
+        transform: translateY(-1px);
+        background: rgba(86, 90, 104, 0.95);
+      }
+
+      @media (max-width: 640px) {
+        .hud {
+          gap: 8px;
+        }
+
+        .hud-slot.left,
+        .hud-slot.right {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="gallery-header">
+      <div class="gallery-header-row">
+        <a class="gallery-header-link" href="https://www.instagram.com/imtortorken/" target="_blank" rel="noopener noreferrer">imtortorken</a>
+        <button id="view-before" class="is-active">colourful</button>
+        <button id="view-2025">mono</button>
+      </div>
+    </div>
+    <div class="hud">
+      <div class="hud-row">
+        <div class="hud-slot left">
+          <button id="prev-art">Prev</button>
+        </div>
+        <div class="hud-slot right">
+          <button id="next-art">Next</button>
+        </div>
+      </div>
+      <div class="hud-row">
+        Zoom
+        <input id="zoom-slider" type="range" min="1.8" max="6" step="0.1" value="4.0" />
+      </div>
+    </div>
+    <div id="three-root"></div>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+      const root = document.getElementById("three-root");
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      root.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x11141b);
+
+      const camera = new THREE.PerspectiveCamera(
+        55,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        200
+      );
+      camera.position.set(0, 2.6, 18);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.enablePan = false;
+      controls.enableZoom = false;
+      controls.enabled = false;
+
+      const ambient = new THREE.AmbientLight(0xffffff, 0.85);
+      scene.add(ambient);
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
+      keyLight.position.set(6, 10, 8);
+      scene.add(keyLight);
+
+      const fillLight = new THREE.PointLight(0xfff3e0, 0.9, 90);
+      fillLight.position.set(-8, 5.5, 0);
+      scene.add(fillLight);
+
+      const spotLight = new THREE.SpotLight(0xffffff, 1.1, 120, Math.PI / 5, 0.35, 1);
+      spotLight.position.set(0, 10, 16);
+      spotLight.target.position.set(0, 2.6, 0);
+      scene.add(spotLight, spotLight.target);
+
+      const imagePaths = Array.from({ length: 55 }, (_, index) => {
+        const number = index + 1;
+        return `img/pasted_images${number}.jpg`;
+      });
+      const imagePaths2025 = Array.from({ length: 19 }, (_, index) => {
+        const number = index + 1;
+        return `img2/piece${number}.jpg`;
+      });
+
+      const spacing = 6.0;
+      const marginX = 6.0;
+      const room = {
+        width: marginX * 2 + spacing * (imagePaths.length - 1),
+        height: 6,
+        depth: 18,
+      };
+
+      const createWallPatternTexture = () => {
+        const size = 256;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+
+        ctx.fillStyle = "#1a1d24";
+        ctx.fillRect(0, 0, size, size);
+
+        const symbols = 26;
+        ctx.fillStyle = "rgba(175, 180, 190, 0.7)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        for (let i = 0; i < symbols; i += 1) {
+          const x = Math.random() * size;
+          const y = Math.random() * size;
+          const rotation = Math.random() * Math.PI * 2;
+          const fontSize = 22 + Math.random() * 20;
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(rotation);
+          ctx.font = `${fontSize.toFixed(1)}px 'Segoe UI', system-ui, sans-serif`;
+          ctx.fillText("𓆉︎", 0, 0);
+          ctx.restore();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        return texture;
+      };
+
+      const createWoodTexture = () => {
+        const size = 512;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+
+        const gradient = ctx.createLinearGradient(0, 0, size, 0);
+        gradient.addColorStop(0, "#6a4a35");
+        gradient.addColorStop(0.35, "#8a6448");
+        gradient.addColorStop(0.7, "#9a7456");
+        gradient.addColorStop(1, "#7a553d");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+
+        ctx.globalAlpha = 0.35;
+        for (let i = 0; i < 46; i += 1) {
+          const x = Math.random() * size;
+          const width = 12 + Math.random() * 28;
+          const alpha = 0.12 + Math.random() * 0.16;
+          ctx.fillStyle = `rgba(0, 0, 0, ${alpha.toFixed(3)})`;
+          ctx.fillRect(x, 0, width, size);
+        }
+        ctx.globalAlpha = 1;
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(3, 2);
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        return texture;
+      };
+
+      const wallPattern = createWallPatternTexture();
+      wallPattern.repeat.set(room.width / 4, room.height / 2);
+      wallPattern.needsUpdate = true;
+      const wallMaterial = new THREE.MeshStandardMaterial({
+        color: 0x222631,
+        roughness: 0.9,
+        metalness: 0.05,
+        map: wallPattern,
+        side: THREE.DoubleSide,
+      });
+      const ceilingPattern = createWallPatternTexture();
+      ceilingPattern.repeat.set(room.width / 4, room.depth / 4);
+      ceilingPattern.needsUpdate = true;
+      const ceilingMaterial = new THREE.MeshStandardMaterial({
+        color: 0x222631,
+        roughness: 0.9,
+        metalness: 0.05,
+        map: ceilingPattern,
+        side: THREE.DoubleSide,
+      });
+      const floorMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.75,
+        metalness: 0,
+        map: createWoodTexture(),
+      });
+
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(room.width, room.depth),
+        floorMaterial
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = 0;
+      scene.add(floor);
+
+      const ceiling = new THREE.Mesh(
+        new THREE.PlaneGeometry(room.width, room.depth),
+        ceilingMaterial
+      );
+      ceiling.rotation.x = Math.PI / 2;
+      ceiling.position.y = room.height;
+      scene.add(ceiling);
+
+      const backWall = new THREE.Mesh(
+        new THREE.PlaneGeometry(room.width, room.height),
+        wallMaterial
+      );
+      backWall.position.set(0, room.height / 2, -room.depth / 2);
+      scene.add(backWall);
+
+      const frontPattern = createWallPatternTexture();
+      frontPattern.repeat.set(room.width / 4, room.height / 2);
+      frontPattern.needsUpdate = true;
+      const frontMaterial = new THREE.MeshStandardMaterial({
+        color: 0x222631,
+        roughness: 0.9,
+        metalness: 0.05,
+        map: frontPattern,
+        side: THREE.DoubleSide,
+      });
+      const frontWall = new THREE.Mesh(
+        new THREE.PlaneGeometry(room.width, room.height),
+        frontMaterial
+      );
+      frontWall.rotation.y = Math.PI;
+      frontWall.position.set(0, room.height / 2, room.depth / 2);
+      scene.add(frontWall);
+
+      const loader = new THREE.TextureLoader();
+      const frameColor = new THREE.Color(0x1f1f1f);
+      const frameMaterial = new THREE.MeshStandardMaterial({
+        color: frameColor,
+        roughness: 0.6,
+        metalness: 0.2,
+      });
+
+      const createPlacements = (count, wallZ, rotationY) => {
+        const placements = [];
+        const marginX = 6.0;
+        const y = room.height * 0.52;
+        const backCols = count;
+
+        const usableWidth = room.width - marginX * 2;
+        const spacing =
+          backCols > 1 ? usableWidth / (backCols - 1) : usableWidth;
+
+        for (let col = 0; col < backCols; col += 1) {
+          const x = -room.width / 2 + marginX + spacing * col;
+          placements.push({
+            position: new THREE.Vector3(x, y, wallZ),
+            rotation: new THREE.Euler(0, rotationY, 0),
+          });
+        }
+
+        return placements;
+      };
+
+      const placementsBefore = createPlacements(
+        imagePaths.length,
+        -room.depth / 2 + 0.06,
+        0
+      );
+      const placementsAfter = createPlacements(
+        imagePaths2025.length,
+        room.depth / 2 - 0.06,
+        Math.PI
+      );
+      const artworkTargetsBefore = [];
+      const artworkTargetsAfter = [];
+      let currentTargets = artworkTargetsBefore;
+      let currentCollection = "before2022";
+      let activeIndex = 0;
+      let activeTarget = null;
+      let isTweening = false;
+      let tweenMultiplier = 1;
+      const zoomMin = 1.8;
+      const zoomMax = 6.0;
+      let cameraDistance = 3.8;
+      const cameraPosition = new THREE.Vector3();
+      const cameraLookAt = new THREE.Vector3();
+      const cameraLookAtCurrent = new THREE.Vector3();
+      let hasLookAt = false;
+
+      const createArtwork = (texture, placement, targetList) => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+        const aspect = texture.image.width / texture.image.height;
+        let height = 1.6;
+        let width = height * aspect;
+
+        const maxWidth = 3.2;
+        const maxHeight = 2.2;
+
+        if (width > maxWidth) {
+          width = maxWidth;
+          height = width / aspect;
+        }
+        if (height > maxHeight) {
+          height = maxHeight;
+          width = height * aspect;
+        }
+
+        const depth = 0.08;
+        const geometry = new THREE.BoxGeometry(width, height, depth);
+
+        const artMaterial = new THREE.MeshStandardMaterial({
+          map: texture,
+          roughness: 0.4,
+          metalness: 0.05,
+        });
+
+        const materials = [
+          frameMaterial,
+          frameMaterial,
+          frameMaterial,
+          frameMaterial,
+          artMaterial,
+          frameMaterial,
+        ];
+
+        const mesh = new THREE.Mesh(geometry, materials);
+        mesh.position.copy(placement.position);
+        mesh.rotation.copy(placement.rotation);
+        scene.add(mesh);
+        targetList.push({
+          position: mesh.position.clone(),
+          rotation: mesh.rotation.clone(),
+        });
+      };
+
+      const updateCameraTarget = (index) => {
+        if (!currentTargets.length) {
+          return;
+        }
+        isTweening = true;
+        controls.enabled = false;
+        activeIndex = (index + currentTargets.length) % currentTargets.length;
+        const target = currentTargets[activeIndex];
+        const forward = new THREE.Vector3(0, 0, 1).applyEuler(target.rotation);
+        cameraLookAt.copy(target.position);
+        cameraPosition.copy(target.position).add(forward.multiplyScalar(cameraDistance));
+        activeTarget = {
+          position: cameraPosition.clone(),
+          lookAt: cameraLookAt.clone(),
+        };
+        if (!hasLookAt) {
+          cameraLookAtCurrent.copy(activeTarget.lookAt);
+          hasLookAt = true;
+        }
+      };
+
+      const setCameraDistance = (value) => {
+        cameraDistance = value;
+        if (!currentTargets.length || !activeTarget) {
+          return;
+        }
+        const target = currentTargets[activeIndex];
+        const forward = new THREE.Vector3(0, 0, 1).applyEuler(target.rotation);
+        cameraLookAt.copy(target.position);
+        cameraPosition.copy(target.position).add(forward.multiplyScalar(cameraDistance));
+        activeTarget = {
+          position: cameraPosition.clone(),
+          lookAt: cameraLookAt.clone(),
+        };
+      };
+
+      const loadArtworks = async (paths, placements, targetList) => {
+        const tasks = paths.map((path) => {
+          return new Promise((resolve) => {
+            loader.load(
+              path,
+              (texture) => resolve({ texture, path }),
+              undefined,
+              () => resolve(null)
+            );
+          });
+        });
+
+        const results = await Promise.all(tasks);
+        const textures = results.filter(Boolean);
+
+        textures.forEach((entry, index) => {
+          const placement = placements[index % placements.length];
+          createArtwork(entry.texture, placement, targetList);
+        });
+      };
+      const updateViewButtons = () => {
+        if (beforeButton && afterButton) {
+          beforeButton.classList.toggle("is-active", currentCollection === "before2022");
+          afterButton.classList.toggle("is-active", currentCollection === "2025");
+        }
+      };
+
+      const setCollection = (collection, useRandom = false) => {
+        currentCollection = collection;
+        currentTargets =
+          collection === "before2022" ? artworkTargetsBefore : artworkTargetsAfter;
+        tweenMultiplier = collection === "2025" ? 2 : 1;
+        if (!currentTargets.length) {
+          return;
+        }
+        const startIndex = useRandom
+          ? Math.floor(Math.random() * currentTargets.length)
+          : 0;
+        updateCameraTarget(startIndex);
+        updateViewButtons();
+      };
+
+      const loadAllArtworks = async () => {
+        await Promise.all([
+          loadArtworks(imagePaths, placementsBefore, artworkTargetsBefore),
+          loadArtworks(imagePaths2025, placementsAfter, artworkTargetsAfter),
+        ]);
+        setCollection("before2022", true);
+      };
+
+      const tweenSpeed = 0.02;
+      const returnSpeed = 0.004;
+
+      const animate = () => {
+        if (activeTarget) {
+          const step = tweenSpeed * tweenMultiplier;
+          camera.position.lerp(activeTarget.position, step);
+          cameraLookAtCurrent.lerp(activeTarget.lookAt, step);
+          camera.lookAt(cameraLookAtCurrent);
+          if (isTweening && camera.position.distanceTo(activeTarget.position) < 0.08) {
+            isTweening = false;
+            controls.target.copy(cameraLookAtCurrent);
+            controls.enabled = true;
+            controls.update();
+          }
+        }
+        if (controls.enabled) {
+          if (activeTarget) {
+            controls.target.lerp(activeTarget.lookAt, returnSpeed);
+          }
+          controls.update();
+        }
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      };
+      animate();
+
+      window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      const goNext = () => {
+        const step = currentCollection === "2025" ? -1 : 1;
+        updateCameraTarget(activeIndex + step);
+      };
+      const goPrev = () => {
+        const step = currentCollection === "2025" ? 1 : -1;
+        updateCameraTarget(activeIndex + step);
+      };
+
+      const beforeButton = document.getElementById("view-before");
+      const afterButton = document.getElementById("view-2025");
+      beforeButton.addEventListener("click", () => setCollection("before2022", true));
+      afterButton.addEventListener("click", () => setCollection("2025", true));
+      updateViewButtons();
+
+      document.getElementById("next-art").addEventListener("click", goNext);
+      document.getElementById("prev-art").addEventListener("click", goPrev);
+
+      const zoomSlider = document.getElementById("zoom-slider");
+      const sliderToDistance = (value) => zoomMin + zoomMax - value;
+      zoomSlider.value = (zoomMin + zoomMax - cameraDistance).toFixed(1);
+      zoomSlider.addEventListener("input", () => {
+        setCameraDistance(sliderToDistance(parseFloat(zoomSlider.value)));
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowRight") {
+          goNext();
+        }
+        if (event.key === "ArrowLeft") {
+          goPrev();
+        }
+      });
+
+      loadAllArtworks();
+
+      // Removed canvas click navigation to avoid conflicts with controls.
+    </script>
+  </body>
+</html>
