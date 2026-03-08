@@ -259,30 +259,23 @@
         }
     }
 
-    function placeArtworks(artworkTextures) {
-        const artworkWidth = 3.5*5;
-        const artworkHeight = 4.5*5;
-        const artworkSpacing = 8*5;
-        const artworkWallOffset = 0.12*5;
-        const artworkYPosition = artworkHeight/2 + 3;
-        for (let i = 0; i < piecesPerWallLeft; i++) {
-            const tex = artworkTextures[i];
-            if (!tex) continue;
-            const artwork = createFramedArtwork(tex, artworkWidth, artworkHeight, artworkTitles[i], i);
-            const zPos = -scene.userData.galleryLength/2 + 10 + i*artworkSpacing;
-            artwork.position.set(-scene.userData.galleryWidth/2 + artworkWallOffset + 0.001, artworkYPosition, zPos);
+    const artworkWidth = 3.5*5, artworkHeight = 4.5*5, artworkSpacing = 8*5;
+    const artworkWallOffset = 0.12*5, artworkYPosition = artworkHeight/2 + 3;
+
+    function placeSingleArtwork(index, tex) {
+        if (!tex || index >= artworkImagePaths.length) return;
+        const artwork = createFramedArtwork(tex, artworkWidth, artworkHeight, artworkTitles[index], index);
+        const zPos = -scene.userData.galleryLength/2 + 10 + (index < piecesPerWallLeft ? index : index - piecesPerWallLeft) * artworkSpacing;
+        artwork.position.y = artworkYPosition;
+        artwork.position.z = zPos;
+        if (index < piecesPerWallLeft) {
+            artwork.position.x = -scene.userData.galleryWidth/2 + artworkWallOffset + 0.001;
             artwork.rotation.y = Math.PI/2;
-            scene.add(artwork);
-        }
-        for (let i = 0; i < piecesPerWallRight; i++) {
-            const tex = artworkTextures[i + piecesPerWallLeft];
-            if (!tex) continue;
-            const artwork = createFramedArtwork(tex, artworkWidth, artworkHeight, artworkTitles[i+piecesPerWallLeft], i+piecesPerWallLeft);
-            const zPos = -scene.userData.galleryLength/2 + 10 + i*artworkSpacing;
-            artwork.position.set(scene.userData.galleryWidth/2 - artworkWallOffset - 0.001, artworkYPosition, zPos);
+        } else {
+            artwork.position.x = scene.userData.galleryWidth/2 - artworkWallOffset - 0.001;
             artwork.rotation.y = -Math.PI/2;
-            scene.add(artwork);
         }
+        scene.add(artwork);
     }
 
     function createGallery() {
@@ -295,14 +288,33 @@
         createWalls();
         createLights();
         const artworkTextures = new Array(artworkImagePaths.length);
-        let loadedCount = 0;
-        artworkImagePaths.forEach((path, i) => {
-            textureLoader.load(path, function(tex) {
-                artworkTextures[i] = tex;
-                loadedCount++;
-                if (loadedCount === artworkImagePaths.length) placeArtworks(artworkTextures);
-            }, undefined, function() { loadedCount++; if (loadedCount === artworkImagePaths.length) placeArtworks(artworkTextures); });
-        });
+        const BATCH_SIZE = 4;
+        let nextIndex = 0;
+        function loadNextBatch() {
+            var end = Math.min(nextIndex + BATCH_SIZE, artworkImagePaths.length);
+            var pending = end - nextIndex;
+            if (pending <= 0) return;
+            for (var i = nextIndex; i < end; i++) {
+                (function(idx) {
+                    textureLoader.load(artworkImagePaths[idx], function(tex) {
+                        artworkTextures[idx] = tex;
+                        placeSingleArtwork(idx, tex);
+                        pending--;
+                        if (pending <= 0) {
+                            nextIndex = end;
+                            if (nextIndex < artworkImagePaths.length) loadNextBatch();
+                        }
+                    }, undefined, function() {
+                        pending--;
+                        if (pending <= 0) {
+                            nextIndex = end;
+                            if (nextIndex < artworkImagePaths.length) loadNextBatch();
+                        }
+                    });
+                })(i);
+            }
+        }
+        loadNextBatch();
     }
 
     function createRailwaySystem() {
@@ -373,10 +385,6 @@
         });
         return cartGroup;
     }
-
-    const artworkSpacing = 8*5;
-    const artworkWallOffset = 0.12*5;
-    const artworkYPosition = (4.5*5)/2 + 3;
 
     function getArtworkPosition(index) {
         const n = Math.max(0, Math.min(index, scene.userData.artworkCount - 1));
