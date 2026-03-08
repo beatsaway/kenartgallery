@@ -421,6 +421,7 @@
     }
 
     function moveCameraToArtwork(index) {
+        if (camera.userData.onTrain) camera.userData.onTrain = null;
         const n = Math.max(0, Math.min(index, scene.userData.artworkCount - 1));
         const pos = getArtworkPosition(n);
         const gw = scene.userData.galleryWidth;
