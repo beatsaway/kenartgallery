@@ -1,14 +1,25 @@
 /**
  * Shared 3D gallery runner for 2016, 2020, 2025.
  * Expects: window.THREE, window.GalleryControls, window.artworkDescriptions / parseArtworkDescription.
- * Reads window.GALLERY_CONFIG: galleryWidth, galleryLength, galleryHeight, artworkImagePaths,
+ * Reads window.GALLERY_CONFIG: galleryWidth, galleryLength, galleryHeight,
+ * artworkImagePaths (array) OR artworkImagePattern + artworkCount (e.g. "images/img_{i}.webp", 10),
  * piecesPerWallLeft, piecesPerWallRight, npcCount, trainCartCount, lighting ('simple'|'spotlights').
  */
 (function() {
     const config = window.GALLERY_CONFIG;
-    if (!config || !config.artworkImagePaths) {
-        console.error('GALLERY_CONFIG with artworkImagePaths required');
+    if (!config) {
+        console.error('GALLERY_CONFIG required');
         return;
+    }
+    if (!config.artworkImagePaths && (config.artworkImagePattern == null || config.artworkCount == null)) {
+        console.error('GALLERY_CONFIG needs artworkImagePaths or artworkImagePattern + artworkCount');
+        return;
+    }
+    if (config.artworkImagePattern != null && config.artworkCount != null) {
+        config.artworkImagePaths = [];
+        for (var i = 1; i <= config.artworkCount; i++) {
+            config.artworkImagePaths.push(config.artworkImagePattern.replace('{i}', String(i).padStart(2, '0')));
+        }
     }
 
     const scene = new THREE.Scene();
@@ -139,10 +150,38 @@
         return lines;
     }
 
+    var artworkContrastVertex = [
+        'varying vec2 vUv;',
+        'void main() {',
+        '  vUv = uv;',
+        '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+        '}'
+    ].join('\n');
+    var artworkContrastFragment = [
+        'uniform sampler2D map;',
+        'uniform float contrastFactor;',
+        'varying vec2 vUv;',
+        'void main() {',
+        '  vec4 texColor = texture2D(map, vUv);',
+        '  vec3 rgb = texColor.rgb;',
+        '  rgb = (rgb - 0.5) * contrastFactor + 0.5;',
+        '  gl_FragColor = vec4(clamp(rgb, 0.0, 1.0), texColor.a);',
+        '}'
+    ].join('\n');
+
     function createFramedArtwork(texture, width, height, title, index) {
         const artworkGroup = new THREE.Group();
         const artworkGeometry = new THREE.PlaneGeometry(width, height);
-        const artworkMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+        const artworkMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                map: { value: texture },
+                contrastFactor: { value: 1.1 }
+            },
+            vertexShader: artworkContrastVertex,
+            fragmentShader: artworkContrastFragment,
+            side: THREE.DoubleSide,
+            depthWrite: true
+        });
         const artwork = new THREE.Mesh(artworkGeometry, artworkMaterial);
         artworkGroup.add(artwork);
         const signWidth = width*0.4;
@@ -288,33 +327,12 @@
         createWalls();
         createLights();
         const artworkTextures = new Array(artworkImagePaths.length);
-        const BATCH_SIZE = 4;
-        let nextIndex = 0;
-        function loadNextBatch() {
-            var end = Math.min(nextIndex + BATCH_SIZE, artworkImagePaths.length);
-            var pending = end - nextIndex;
-            if (pending <= 0) return;
-            for (var i = nextIndex; i < end; i++) {
-                (function(idx) {
-                    textureLoader.load(artworkImagePaths[idx], function(tex) {
-                        artworkTextures[idx] = tex;
-                        placeSingleArtwork(idx, tex);
-                        pending--;
-                        if (pending <= 0) {
-                            nextIndex = end;
-                            if (nextIndex < artworkImagePaths.length) loadNextBatch();
-                        }
-                    }, undefined, function() {
-                        pending--;
-                        if (pending <= 0) {
-                            nextIndex = end;
-                            if (nextIndex < artworkImagePaths.length) loadNextBatch();
-                        }
-                    });
-                })(i);
-            }
-        }
-        loadNextBatch();
+        artworkImagePaths.forEach(function(path, idx) {
+            textureLoader.load(path, function(tex) {
+                artworkTextures[idx] = tex;
+                placeSingleArtwork(idx, tex);
+            }, undefined, function() {});
+        });
     }
 
     function createRailwaySystem() {
