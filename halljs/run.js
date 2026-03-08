@@ -11,8 +11,16 @@
             var popupEl = document.createElement('div');
             popupEl.id = 'hall-popup';
             popupEl.className = popup.showOnLoad !== false ? 'show-on-load visible' : '';
-            popupEl.innerHTML = (popup.html || '').replace(/\n/g, '<br>');
+            var mainDiv = document.createElement('div');
+            mainDiv.className = 'hall-popup-main';
+            mainDiv.innerHTML = (popup.html || '').replace(/\n/g, '<br>');
+            popupEl.appendChild(mainDiv);
             document.body.appendChild(popupEl);
+            var exitWrap = document.createElement('div');
+            exitWrap.className = 'hall-popup-exit';
+            if (popupEl.classList.contains('visible') || popupEl.classList.contains('show-on-load')) exitWrap.classList.add('visible');
+            exitWrap.innerHTML = '<a href="../index.html" class="nodeco exit-room">Leave</a>';
+            document.body.appendChild(exitWrap);
 
             window.GALLERY_CONFIG = data.gallery || {};
             try {

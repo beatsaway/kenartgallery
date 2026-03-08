@@ -20,7 +20,8 @@
     scene.userData.artworkCount = config.artworkImagePaths.length;
 
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const cameraFar = Math.max(1000, scene.userData.galleryLength * 1.2);
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, cameraFar);
     const renderer = new THREE.WebGLRenderer({ antialias: isMobile ? false : true, powerPreference: isMobile ? 'low-power' : 'high-performance' });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById('scene-container').appendChild(renderer.domElement);
@@ -428,7 +429,7 @@
     });
 
     createGallery();
-    setRandomInitialPosition();
+    moveCameraToArtwork(0);
 
     const hallPopup = document.getElementById('hall-popup');
     if (hallPopup) {
@@ -436,11 +437,32 @@
             if (e.target.classList.contains('nodeco')) return;
         });
         document.addEventListener('click', function(e) {
-            if (!hallPopup.contains(e.target) && (hallPopup.classList.contains('visible') || hallPopup.classList.contains('show-on-load'))) {
+            if (!hallPopup.contains(e.target) && !e.target.closest('.hall-popup-exit') && (hallPopup.classList.contains('visible') || hallPopup.classList.contains('show-on-load'))) {
                 hallPopup.classList.remove('visible');
                 hallPopup.classList.remove('show-on-load');
+                var exitEl = document.querySelector('.hall-popup-exit');
+                if (exitEl) exitEl.classList.remove('visible');
             }
         });
+        const infoBtn = document.createElement('button');
+        infoBtn.type = 'button';
+        infoBtn.setAttribute('aria-label', 'Info');
+        infoBtn.textContent = 'i';
+        infoBtn.style.cssText = 'position:fixed;top:10px;right:16px;z-index:1003;width:28px;height:28px;padding:0;border:none;border-radius:50%;background:rgba(255,255,255,0.2);color:#fff;font-size:16px;font-style:italic;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;text-shadow:0 1px 2px rgba(0,0,0,0.5)';
+        infoBtn.addEventListener('mouseenter', function() { infoBtn.style.background = 'rgba(255,255,255,0.35)'; });
+        infoBtn.addEventListener('mouseleave', function() { infoBtn.style.background = 'rgba(255,255,255,0.2)'; });
+        infoBtn.addEventListener('click', function() {
+                var exitEl = document.querySelector('.hall-popup-exit');
+                if (hallPopup.classList.contains('visible') || hallPopup.classList.contains('show-on-load')) {
+                    hallPopup.classList.remove('visible');
+                    hallPopup.classList.remove('show-on-load');
+                    if (exitEl) exitEl.classList.remove('visible');
+                } else {
+                    hallPopup.classList.add('visible');
+                    if (exitEl) exitEl.classList.add('visible');
+                }
+            });
+        document.body.appendChild(infoBtn);
     }
 
     window.addEventListener('resize', function() {
@@ -582,7 +604,7 @@
 
     (function addGuideHeader() {
         const style = document.createElement('style');
-        style.textContent = '#hall-guide-header{position:fixed;top:0;left:0;right:0;z-index:1002;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;color:#fff;font-family:Helvetica Neue,Arial,sans-serif;font-size:14px;pointer-events:auto}#hall-guide-header select{padding:4px 8px;border:none;background:transparent;color:#fff;cursor:pointer;min-width:3em;font-size:inherit;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,0.9),0 0 8px rgba(0,0,0,0.6);appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:none}#hall-guide-header select option{background:#222;color:#fff}#hall-guide-prev,#hall-guide-next{padding:2px 6px;border:none;background:transparent;color:#fff;cursor:pointer;font-size:inherit;text-shadow:0 1px 2px rgba(0,0,0,0.5)}#hall-guide-prev:hover,#hall-guide-next:hover{opacity:0.85}#hall-guide-home{position:fixed;top:10px;left:16px;z-index:1003;padding:2px 6px;border:none;background:transparent;color:#fff;cursor:pointer;font-size:inherit;font-family:Helvetica Neue,Arial,sans-serif;text-shadow:0 1px 2px rgba(0,0,0,0.5)}#hall-guide-home:hover{opacity:0.85}';
+        style.textContent = '#hall-guide-header{position:fixed;top:0;left:0;right:0;z-index:1002;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;color:#fff;font-family:Helvetica Neue,Arial,sans-serif;font-size:14px;pointer-events:auto}#hall-guide-header select{padding:4px 8px;border:none;background:transparent;color:#fff;cursor:pointer;min-width:3em;font-size:inherit;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,0.9),0 0 8px rgba(0,0,0,0.6);appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:none}#hall-guide-header select option{background:#222;color:#fff}#hall-guide-prev,#hall-guide-next{padding:2px 6px;border:none;background:transparent;color:#fff;cursor:pointer;font-size:inherit;text-shadow:0 1px 2px rgba(0,0,0,0.5)}#hall-guide-prev:hover,#hall-guide-next:hover{opacity:0.85}';
         document.head.appendChild(style);
         const header = document.createElement('header');
         header.id = 'hall-guide-header';
@@ -590,6 +612,7 @@
         const count = scene.userData.artworkCount;
         const select = header.querySelector('#hall-guide-select');
         for (let i = 1; i <= count; i++) select.appendChild(new Option('' + i, i - 1));
+        select.value = 0;
         function goToSelected() {
             const n = parseInt(select.value, 10);
             if (!isNaN(n) && window.moveCameraToArtwork) window.moveCameraToArtwork(n);
@@ -605,11 +628,6 @@
             select.value = idx;
             goToSelected();
         });
-        const homeBtn = document.createElement('button');
-        homeBtn.type = 'button';
-        homeBtn.id = 'hall-guide-home';
-        homeBtn.title = 'Gallery (H)';
-        homeBtn.textContent = 'ઉ';
         function goHome() {
             var path = location.pathname.replace(/\/$/, '');
             var segments = path.split('/').filter(Boolean);
@@ -617,8 +635,6 @@
             var galleryRoot = segments.length ? '/' + segments.join('/') + '/' : '/';
             window.location.href = location.origin + galleryRoot + 'index.html';
         }
-        homeBtn.addEventListener('click', goHome);
-        document.body.appendChild(homeBtn);
         document.addEventListener('keydown', function(e) {
             var tag = document.activeElement && document.activeElement.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -635,6 +651,20 @@
             } else if (e.code === 'KeyH') {
                 e.preventDefault();
                 goHome();
+            } else if (e.code === 'KeyI') {
+                e.preventDefault();
+                var popup = document.getElementById('hall-popup');
+                var exitEl = document.querySelector('.hall-popup-exit');
+                if (popup) {
+                    if (popup.classList.contains('visible') || popup.classList.contains('show-on-load')) {
+                        popup.classList.remove('visible');
+                        popup.classList.remove('show-on-load');
+                        if (exitEl) exitEl.classList.remove('visible');
+                    } else {
+                        popup.classList.add('visible');
+                        if (exitEl) exitEl.classList.add('visible');
+                    }
+                }
             }
         });
         document.body.appendChild(header);

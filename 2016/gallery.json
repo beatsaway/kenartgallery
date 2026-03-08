@@ -1,7 +1,7 @@
 {
   "popup": {
     "showOnLoad": true,
-    "html": "Pen and Pencil Doodles by\n<a href=\"https://www.youtube.com/@tortorken\" class=\"nodeco\">imtortorken</a>\n© 2016<br>\n<a href=\"https://buymeacoffee.com/beatsaway\" class=\"nodeco\">☕ Support this artist</a>"
+    "html": "<span class=\"popup-title\">Pen and Pencil Doodles</span>\nby <a href=\"https://www.instagram.com/imtortorken\" class=\"nodeco\">imtortorken</a>\n© 2016\n<a href=\"https://buymeacoffee.com/beatsaway\" class=\"nodeco\">☕ Support this artist</a>"
   },
   "gallery": {
     "galleryWidth": 70,
