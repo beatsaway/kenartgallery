@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ken Art Gallery</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #e8e8e8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: clamp(1.75rem, 4vw, 2.25rem);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            margin: 0 0 0.5rem;
+            color: #fff;
+        }
+        .tagline {
+            font-size: 0.95rem;
+            opacity: 0.85;
+            margin-bottom: 2.5rem;
+        }
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+        }
+        .nav a {
+            display: block;
+            padding: 1rem 1.75rem;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .nav a:hover {
+            background: rgba(255,255,255,0.14);
+            border-color: rgba(255,255,255,0.25);
+        }
+        .nav a:focus {
+            outline: 2px solid rgba(74, 158, 255, 0.6);
+            outline-offset: 2px;
+        }
+        footer {
+            margin-top: 3rem;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        footer a { color: #7ab8ff; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Ken Art Gallery</h1>
+    <p class="tagline">3D galleries · Click a year to enter</p>
+    <nav class="nav">
+        <a href="2016/">2016</a>
+        <a href="2020/">2020</a>
+        <a href="2025/">2025</a>
+    </nav>
+    <footer>
+        by <a href="https://www.youtube.com/@tortorken" target="_blank" rel="noopener">imtortorken</a>
+        · <a href="https://buymeacoffee.com/beatsaway" target="_blank" rel="noopener">Support</a>
+    </footer>
+</body>
+</html>

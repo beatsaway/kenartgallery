@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Art Gallery</title>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; background: #000; }
+        #scene-container { position: relative; width: 100vw; height: 100vh; background: linear-gradient(to bottom, #87CEEB, #1E90FF); }
+        #controls-info { position: fixed; bottom: 20px; left: 20px; color: white; font-size: 14px; text-shadow: 2px 2px #000; z-index: 1000; line-height: 1.4; pointer-events: none; }
+        #controls-info p { margin: 4px 0; }
+        #artwork-info { display: none; }
+        .train-prompt { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px; border-radius: 6px; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+        .train-prompt.visible { opacity: 1; }
+        #hall-popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001; background: rgba(0, 0, 0, 0.9); color: #fff; padding: 1.25rem 1.5rem; border-radius: 10px; text-align: center; font-size: 0.9rem; line-height: 1.6; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); min-width: 260px; }
+        #hall-popup.visible { display: block; }
+        #hall-popup.show-on-load { display: block; }
+        #hall-popup .nodeco { color: #4a9eff; text-decoration: none; }
+        #hall-popup .nodeco:hover { color: #7ab8ff; text-decoration: underline; }
+        #train-button { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 24px; border: none; background: none; color: white; cursor: pointer; display: none; z-index: 1000; }
+        @media (max-width: 768px) { #controls-info { display: none; } }
+    </style>
+</head>
+<body>
+    <div id="scene-container"></div>
+    <button id="train-button" title="Board/Exit Train">🚂🅴</button>
+    <div id="hall-popup" class="show-on-load visible">
+        Paint and Digital Art by
+        <a href="https://www.youtube.com/@tortorken" class="nodeco">imtortorken</a>
+        © 2020<br>
+        <a href="https://buymeacoffee.com/beatsaway" class="nodeco">☕ Support this artist</a>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.183.2/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.183.2/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        const THREE_global = Object.assign({}, THREE, { OrbitControls });
+        window.THREE = THREE_global;
+        const runApp = () => {
+            const base = document.currentScript?.src?.replace(/\/[^/]*$/, '/') || (document.baseURI || window.location.href).replace(/\/[^/]*$/, '/');
+            const s1 = document.createElement('script');
+            s1.src = (base || '') + 'images/artworkDescriptions.js';
+            s1.onload = () => {
+                const s2 = document.createElement('script');
+                s2.src = (base || '') + 'controls.js';
+                s2.onload = () => document.dispatchEvent(new CustomEvent('three-ready'));
+                document.body.appendChild(s2);
+            };
+            document.body.appendChild(s1);
+        };
+        runApp();
+    </script>
+    <script>
+    document.addEventListener('three-ready', function() {
+        const scene = new THREE.Scene();
+        scene.userData.galleryWidth = 70;
+        scene.userData.galleryLength = 1200;
+        scene.userData.galleryHeight = 40;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: isMobile ? false : true, powerPreference: isMobile ? 'low-power' : 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('scene-container').appendChild(renderer.domElement);
+        const controls = new GalleryControls(camera, scene);
+        controls.setupEventListeners();
+        const trainSystem = { carts: [], track: null, speed: 0.05, direction: 1, currentPosition: 0 };
+        const artworkTitles = [];
+        for (let i = 1; i <= 45; i++) artworkTitles.push('Piece ' + i);
+        const npcs = [];
+        const npcCount = 16;
+        const ARTWORK_COUNT = 45;
+        const piecesPerWallLeft = 23;
+        const piecesPerWallRight = 22;
+
+        function createCuteMinecraftVillager() {
+            const group = new THREE.Group();
+            const scale = 0.5;
+            const skinColor = new THREE.Color(Math.random(), Math.random(), Math.random());
+            const clothesColor = new THREE.Color(Math.random(), Math.random(), Math.random());
+            const headGeometry = new THREE.BoxGeometry(1*scale, 1*scale, 1*scale);
+            const headMaterial = new THREE.MeshBasicMaterial({ color: skinColor });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = 0.8*scale;
+            group.add(head);
+            const bodyGeometry = new THREE.BoxGeometry(0.8*scale, 0.8*scale, 0.5*scale);
+            const bodyMaterial = new THREE.MeshBasicMaterial({ color: clothesColor });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            group.add(body);
+            const armGeometry = new THREE.BoxGeometry(0.3*scale, 0.8*scale, 0.3*scale);
+            group.add(new THREE.Mesh(armGeometry, bodyMaterial));
+            group.children[2].position.set(-0.55*scale, 0, 0);
+            group.add(new THREE.Mesh(armGeometry, bodyMaterial));
+            group.children[3].position.set(0.55*scale, 0, 0);
+            const legGeometry = new THREE.BoxGeometry(0.3*scale, 0.5*scale, 0.3*scale);
+            const pantsMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color(clothesColor).multiplyScalar(0.7) });
+            group.add(new THREE.Mesh(legGeometry, pantsMaterial));
+            group.children[4].position.set(-0.2*scale, -0.65*scale, 0);
+            group.add(new THREE.Mesh(legGeometry, pantsMaterial));
+            group.children[5].position.set(0.2*scale, -0.65*scale, 0);
+            group.userData.walkStyle = { frequency: 0.8+Math.random()*0.4, legAmplitude: 0.3+Math.random()*0.4, armAmplitude: 0.2+Math.random()*0.5, bodyTilt: (Math.random()-0.5)*0.1, headBob: 0.05+Math.random()*0.1, swayAmount: Math.random()*0.1 };
+            return group;
+        }
+
+        function createNPC() {
+            const npc = createCuteMinecraftVillager();
+            npc.position.set((Math.random()-0.5)*(scene.userData.galleryWidth-2), 0.65, -scene.userData.galleryLength/2+5+Math.random()*(scene.userData.galleryLength-10));
+            npc.userData.velocity = new THREE.Vector3();
+            npc.userData.direction = new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize();
+            npc.userData.speed = 0.2+Math.random()*0.5;
+            npc.userData.changeDirectionTime = Math.random()*8000;
+            npc.userData.lastDirectionChange = performance.now();
+            npc.userData.walkCycle = Math.random()*Math.PI*2;
+            npc.userData.pauseTime = 0;
+            npc.userData.isPaused = false;
+            scene.add(npc);
+            npcs.push(npc);
+            return npc;
+        }
+        for (let i = 0; i < npcCount; i++) createNPC();
+
+        function updateNPCs(time) {
+            for (const npc of npcs) {
+                if (!npc.userData.isPaused) {
+                    if (Math.random() < 0.001) { npc.userData.isPaused = true; npc.userData.pauseTime = time+Math.random()*3000; }
+                } else if (time > npc.userData.pauseTime) npc.userData.isPaused = false;
+                if (!npc.userData.isPaused) {
+                    if (time - npc.userData.lastDirectionChange > npc.userData.changeDirectionTime) {
+                        const angle = Math.random()*Math.PI*2;
+                        npc.userData.direction.set(Math.cos(angle), 0, Math.sin(angle)).normalize();
+                        npc.userData.changeDirectionTime = 3000+Math.random()*8000;
+                        npc.userData.lastDirectionChange = time;
+                    }
+                    const newPosition = npc.position.clone();
+                    newPosition.x += npc.userData.direction.x*npc.userData.speed*0.02;
+                    newPosition.z += npc.userData.direction.z*npc.userData.speed*0.02;
+                    const margin = 1;
+                    newPosition.x = Math.max(-scene.userData.galleryWidth/2+margin, Math.min(scene.userData.galleryWidth/2-margin, newPosition.x));
+                    newPosition.z = Math.max(-scene.userData.galleryLength/2+margin, Math.min(scene.userData.galleryLength/2-margin, newPosition.z));
+                    npc.position.copy(newPosition);
+                    npc.rotation.y = Math.atan2(npc.userData.direction.x, npc.userData.direction.z);
+                    const style = npc.userData.walkStyle;
+                    npc.userData.walkCycle += style.frequency*0.1;
+                    npc.children[4].rotation.x = Math.sin(npc.userData.walkCycle)*style.legAmplitude;
+                    npc.children[5].rotation.x = Math.sin(npc.userData.walkCycle+Math.PI)*style.legAmplitude;
+                    npc.children[2].rotation.x = Math.sin(npc.userData.walkCycle+Math.PI)*style.armAmplitude;
+                    npc.children[3].rotation.x = Math.sin(npc.userData.walkCycle)*style.armAmplitude;
+                    npc.children[1].rotation.z = Math.sin(npc.userData.walkCycle*2)*style.swayAmount+style.bodyTilt;
+                    npc.children[0].rotation.x = Math.sin(npc.userData.walkCycle*2)*style.headBob;
+                } else {
+                    npc.children.forEach(part => part.rotation.set(0,0,0));
+                }
+            }
+        }
+
+        const artworkImagePaths = [];
+        for (let i = 1; i <= ARTWORK_COUNT; i++) artworkImagePaths.push('images/pasted_images' + i + '.jpg');
+
+        function wrapText(ctx, text, maxWidth) {
+            const words = text.split(' ');
+            const lines = [];
+            let currentLine = words[0] || '';
+            for (let i = 1; i < words.length; i++) {
+                const word = words[i];
+                if (ctx.measureText(currentLine + ' ' + word).width < maxWidth) currentLine += ' ' + word;
+                else { lines.push(currentLine); currentLine = word; }
+            }
+            lines.push(currentLine);
+            return lines;
+        }
+
+        function createFramedArtwork(texture, width, height, title, index) {
+            const artworkGroup = new THREE.Group();
+            const artworkGeometry = new THREE.PlaneGeometry(width, height);
+            const artworkMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+            const artwork = new THREE.Mesh(artworkGeometry, artworkMaterial);
+            artworkGroup.add(artwork);
+            const signWidth = width*0.4;
+            const signHeight = height*0.1;
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 180;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0,0,512,180);
+            ctx.fillStyle = '#222';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let parsed = { title: title, description: title };
+            if (typeof parseArtworkDescription === 'function') {
+                parsed = parseArtworkDescription(index);
+            } else if (typeof artworkDescriptions !== 'undefined' && artworkDescriptions[index]) {
+                const description = artworkDescriptions[index];
+                const descLines = description.split('\n');
+                parsed = { title: descLines[0].replace(/\*\*/g, '') || title, description: descLines[1] || title };
+            }
+            ctx.font = 'bold 20px "Playfair Display", "Times New Roman", serif';
+            ctx.fillText(parsed.title, 256, 30);
+            ctx.font = '14px "Playfair Display", "Times New Roman", serif';
+            const lines = wrapText(ctx, parsed.description, 440);
+            const lineHeight = 20;
+            const startY = 60 + (180 - 60 - lines.length*lineHeight)/2;
+            lines.forEach((line, i) => ctx.fillText(line, 256, startY + i*lineHeight));
+            const signTexture = new THREE.CanvasTexture(canvas);
+            const signGeometry = new THREE.PlaneGeometry(signWidth, signHeight);
+            const sign = new THREE.Mesh(signGeometry, new THREE.MeshBasicMaterial({ map: signTexture, side: THREE.DoubleSide, transparent: true }));
+            sign.position.set(0, -height/2 - signHeight/2 - 0.2, 0);
+            artworkGroup.add(sign);
+            return artworkGroup;
+        }
+
+        function createGallery() {
+            createFloor();
+            const ceilingGeometry = new THREE.PlaneGeometry(scene.userData.galleryWidth, scene.userData.galleryLength);
+            const ceiling = new THREE.Mesh(ceilingGeometry, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
+            ceiling.position.y = scene.userData.galleryHeight;
+            ceiling.rotation.x = Math.PI/2;
+            scene.add(ceiling);
+            createWalls();
+            createLights();
+            const artworkTextures = new Array(artworkImagePaths.length);
+            let loadedCount = 0;
+            artworkImagePaths.forEach((path, i) => {
+                textureLoader.load(path, function(tex) {
+                    artworkTextures[i] = tex;
+                    loadedCount++;
+                    if (loadedCount === artworkImagePaths.length) placeArtworks(artworkTextures);
+                }, undefined, function() { loadedCount++; if (loadedCount === artworkImagePaths.length) placeArtworks(artworkTextures); });
+            });
+        }
+
+        function createFloor() {
+            const floorGeometry = new THREE.PlaneGeometry(scene.userData.galleryWidth, scene.userData.galleryLength);
+            textureLoader.load('https://threejs.org/examples/textures/hardwood2_diffuse.jpg', function(woodTexture) {
+                woodTexture.wrapS = THREE.RepeatWrapping;
+                woodTexture.wrapT = THREE.RepeatWrapping;
+                woodTexture.repeat.set(40, 40);
+                const floorMaterial = new THREE.MeshStandardMaterial({ map: woodTexture, roughness: 0.8, metalness: 0.2, side: THREE.DoubleSide });
+                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                floor.rotation.x = -Math.PI/2;
+                floor.receiveShadow = true;
+                scene.add(floor);
+            });
+        }
+
+        let crateTexture = null;
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load('https://threejs.org/examples/textures/crate.gif', function(tex) {
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            crateTexture = tex;
+            createRailwaySystem();
+        });
+
+        function createWalls() {
+            const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(scene.userData.galleryWidth, scene.userData.galleryHeight), wallMaterial);
+            backWall.position.set(0, scene.userData.galleryHeight/2, -scene.userData.galleryLength/2);
+            scene.add(backWall);
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(scene.userData.galleryLength, scene.userData.galleryHeight), wallMaterial);
+            leftWall.position.x = -scene.userData.galleryWidth/2;
+            leftWall.position.y = scene.userData.galleryHeight/2;
+            leftWall.rotation.y = Math.PI/2;
+            scene.add(leftWall);
+            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(scene.userData.galleryLength, scene.userData.galleryHeight), wallMaterial);
+            rightWall.position.x = scene.userData.galleryWidth/2;
+            rightWall.position.y = scene.userData.galleryHeight/2;
+            rightWall.rotation.y = -Math.PI/2;
+            scene.add(rightWall);
+            const frontWall = new THREE.Mesh(new THREE.PlaneGeometry(scene.userData.galleryWidth, scene.userData.galleryHeight), wallMaterial);
+            frontWall.position.set(0, scene.userData.galleryHeight/2, scene.userData.galleryLength/2);
+            scene.add(frontWall);
+        }
+
+        function placeArtworks(artworkTextures) {
+            const artworkWidth = 3.5*5;
+            const artworkHeight = 4.5*5;
+            const artworkSpacing = 8*5;
+            const artworkWallOffset = 0.12*5;
+            const artworkYPosition = artworkHeight/2 + 3;
+            for (let i = 0; i < piecesPerWallLeft; i++) {
+                const tex = artworkTextures[i];
+                if (!tex) continue;
+                const artwork = createFramedArtwork(tex, artworkWidth, artworkHeight, artworkTitles[i], i);
+                const zPos = -scene.userData.galleryLength/2 + 10 + i*artworkSpacing;
+                artwork.position.set(-scene.userData.galleryWidth/2 + artworkWallOffset + 0.001, artworkYPosition, zPos);
+                artwork.rotation.y = Math.PI/2;
+                scene.add(artwork);
+            }
+            for (let i = 0; i < piecesPerWallRight; i++) {
+                const tex = artworkTextures[i + piecesPerWallLeft];
+                if (!tex) continue;
+                const artwork = createFramedArtwork(tex, artworkWidth, artworkHeight, artworkTitles[i+piecesPerWallLeft], i+piecesPerWallLeft);
+                const zPos = -scene.userData.galleryLength/2 + 10 + i*artworkSpacing;
+                artwork.position.set(scene.userData.galleryWidth/2 - artworkWallOffset - 0.001, artworkYPosition, zPos);
+                artwork.rotation.y = -Math.PI/2;
+                scene.add(artwork);
+            }
+        }
+
+        function createLights() {
+            scene.add(new THREE.AmbientLight(0xffffff, 2.0));
+            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x404040, 1.2);
+            scene.add(hemisphereLight);
+        }
+
+        function createRailwaySystem() {
+            if (!crateTexture) return;
+            const railSeparation = 1.2, railWidth = 0.15, railHeight = 0.1, railLength = scene.userData.galleryLength;
+            const leftRailTexture = crateTexture.clone();
+            leftRailTexture.repeat.set(1, 40);
+            const leftRail = new THREE.Mesh(new THREE.BoxGeometry(railWidth, railHeight, railLength), new THREE.MeshStandardMaterial({ map: leftRailTexture, roughness: 0.7, metalness: 0.2, side: THREE.DoubleSide }));
+            leftRail.position.set(-railSeparation/2, 0.05, 0);
+            scene.add(leftRail);
+            const rightRailTexture = crateTexture.clone();
+            rightRailTexture.repeat.set(1, 40);
+            const rightRail = new THREE.Mesh(new THREE.BoxGeometry(railWidth, railHeight, railLength), new THREE.MeshStandardMaterial({ map: rightRailTexture, roughness: 0.7, metalness: 0.2, side: THREE.DoubleSide }));
+            rightRail.position.set(railSeparation/2, 0.05, 0);
+            scene.add(rightRail);
+            const sleeperTexture = crateTexture.clone();
+            sleeperTexture.repeat.set(2, 1);
+            const sleeperMaterial = new THREE.MeshStandardMaterial({ map: sleeperTexture, roughness: 0.8, metalness: 0.2, side: THREE.DoubleSide });
+            for (let z = -scene.userData.galleryLength/2+2; z < scene.userData.galleryLength/2-2; z += 2) {
+                const sleeper = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.4), sleeperMaterial);
+                sleeper.position.set(0, 0.02, z);
+                scene.add(sleeper);
+            }
+            const cartSpacing = 2.5;
+            for (let i = 0; i < 10; i++) {
+                const cart = createMinecart();
+                cart.position.z = -scene.userData.galleryLength/2 + 5 + i*cartSpacing;
+                trainSystem.carts.push(cart);
+                scene.add(cart);
+            }
+            trainSystem.update = function() {
+                trainSystem.carts.forEach(function(cart) {
+                    cart.position.z += trainSystem.speed;
+                    const margin = 1;
+                    if (cart.position.z > scene.userData.galleryLength/2+margin) cart.position.z = -scene.userData.galleryLength/2-margin;
+                    else if (cart.position.z < -scene.userData.galleryLength/2-margin) cart.position.z = scene.userData.galleryLength/2+margin;
+                    cart.children.slice(3).forEach(function(wheel) { wheel.rotation.x += 0.1*trainSystem.speed; });
+                    if (camera.userData.onTrain === cart) {
+                        camera.position.x = cart.position.x;
+                        camera.position.y = cart.position.y + 1.5;
+                        camera.position.z = cart.position.z;
+                    }
+                });
+            };
+        }
+
+        function createMinecart() {
+            const cartGroup = new THREE.Group();
+            const cartTexture = crateTexture.clone();
+            cartTexture.repeat.set(2, 1);
+            const baseMaterial = new THREE.MeshStandardMaterial({ map: cartTexture, roughness: 0.7, metalness: 0.2 });
+            const base = new THREE.Mesh(new THREE.BoxGeometry(2, 0.5, 2), baseMaterial);
+            base.position.y = 0.5;
+            cartGroup.add(base);
+            const sideMaterial = new THREE.MeshStandardMaterial({ map: cartTexture, roughness: 0.7, metalness: 0.2 });
+            const leftSide = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 2), sideMaterial);
+            leftSide.position.set(-0.95, 1, 0);
+            cartGroup.add(leftSide);
+            const rightSide = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 2), sideMaterial);
+            rightSide.position.set(0.95, 1, 0);
+            cartGroup.add(rightSide);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ map: cartTexture, roughness: 0.7, metalness: 0.2 });
+            [[-0.8,0.3,-0.8],[0.8,0.3,-0.8],[-0.8,0.3,0.8],[0.8,0.3,0.8]].forEach(function(pos) {
+                const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16), wheelMaterial);
+                wheel.rotation.z = Math.PI/2;
+                wheel.position.set(pos[0], pos[1], pos[2]);
+                cartGroup.add(wheel);
+            });
+            return cartGroup;
+        }
+
+        function setRandomInitialPosition() {
+            const isLeftWall = Math.random() < 0.5;
+            const zPos = -scene.userData.galleryLength/2 + 10 + Math.floor(Math.random()*piecesPerWallLeft)*(8*5);
+            camera.position.set(0, 0.8, zPos);
+            if (isLeftWall) camera.lookAt(new THREE.Vector3(-scene.userData.galleryWidth/2, 0.8, zPos));
+            else camera.lookAt(new THREE.Vector3(scene.userData.galleryWidth/2, 0.8, zPos));
+        }
+
+        createGallery();
+        const galleryControls = new GalleryControls(camera, scene);
+        setRandomInitialPosition();
+
+        const hallPopup = document.getElementById('hall-popup');
+        hallPopup.addEventListener('click', function(e) {
+            if (e.target.classList.contains('nodeco')) return;
+        });
+        document.addEventListener('click', function(e) {
+            if (!hallPopup.contains(e.target) && (hallPopup.classList.contains('visible') || hallPopup.classList.contains('show-on-load'))) {
+                hallPopup.classList.remove('visible');
+                hallPopup.classList.remove('show-on-load');
+            }
+        });
+
+        window.addEventListener('resize', function() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        const trainButton = document.getElementById('train-button');
+        function updateTrainButton() {
+            if (!trainSystem || !trainSystem.carts || trainSystem.carts.length === 0) { trainButton.style.display = 'none'; return; }
+            let nearest = null, shortest = Infinity;
+            trainSystem.carts.forEach(function(cart) {
+                const d = Math.sqrt(Math.pow(camera.position.x-cart.position.x,2)+Math.pow(camera.position.z-cart.position.z,2));
+                if (d < shortest) { shortest = d; nearest = cart; }
+            });
+            trainButton.style.display = (shortest < 3 && nearest) ? 'block' : 'none';
+        }
+        function handleTrainInteraction() {
+            let nearest = null, shortest = Infinity;
+            trainSystem.carts.forEach(function(cart) {
+                const d = Math.sqrt(Math.pow(camera.position.x-cart.position.x,2)+Math.pow(camera.position.z-cart.position.z,2));
+                if (d < shortest) { shortest = d; nearest = cart; }
+            });
+            if (shortest < 3 && nearest) {
+                if (!camera.userData.onTrain) {
+                    camera.userData.onTrain = nearest;
+                    camera.position.x = nearest.position.x + 0.5;
+                    camera.position.y = nearest.position.y + 1.2;
+                    camera.position.z = nearest.position.z;
+                } else {
+                    camera.userData.onTrain = null;
+                    camera.position.x = nearest.position.x + 2;
+                }
+            }
+        }
+        document.addEventListener('keydown', function(e) { if (e.code === 'KeyE') handleTrainInteraction(); });
+        trainButton.addEventListener('click', handleTrainInteraction);
+
+        let lastMovementUpdate = 0;
+        const MOVEMENT_UPDATE_INTERVAL = 20;
+        function animate() {
+            requestAnimationFrame(animate);
+            if (document.hidden) return;
+            const time = performance.now();
+            updateNPCs(time);
+            if (trainSystem && typeof trainSystem.update === 'function') {
+                trainSystem.update();
+                updateTrainButton();
+            }
+            if (camera.userData.onTrain) camera.position.z = camera.userData.onTrain.position.z;
+            if (camera.userData.movement && time - lastMovementUpdate >= MOVEMENT_UPDATE_INTERVAL) {
+                const m = camera.userData.movement;
+                camera.position.x += m.x*0.5*m.distance;
+                camera.position.z += m.z*0.5*m.distance;
+                camera.position.y = 0.8;
+                lastMovementUpdate = time;
+            }
+            galleryControls.update();
+            renderer.render(scene, camera);
+        }
+
+        const touchAreaRadius = 100, touchAreaMargin = 20;
+        let activeTouches = new Map();
+        const cameraTouchArea = document.createElement('div');
+        cameraTouchArea.style.cssText = 'position:fixed;bottom:'+touchAreaMargin+'px;right:'+touchAreaMargin+'px;width:'+(touchAreaRadius*2)+'px;height:'+(touchAreaRadius*2)+'px;border:2px solid rgba(255,255,255,0.3);border-radius:50%;pointer-events:none;z-index:1000;display:none;';
+        document.body.appendChild(cameraTouchArea);
+        const movementTouchArea = document.createElement('div');
+        movementTouchArea.style.cssText = 'position:fixed;bottom:'+touchAreaMargin+'px;left:'+touchAreaMargin+'px;width:'+(touchAreaRadius*2)+'px;height:'+(touchAreaRadius*2)+'px;border:2px solid rgba(255,255,255,0.3);border-radius:50%;pointer-events:none;z-index:1000;display:none;';
+        document.body.appendChild(movementTouchArea);
+        if (isMobile) { cameraTouchArea.style.display = 'block'; movementTouchArea.style.display = 'block'; }
+        function isTouchInCameraArea(x, y) {
+            const cx = window.innerWidth - touchAreaMargin - touchAreaRadius, cy = window.innerHeight - touchAreaMargin - touchAreaRadius;
+            return Math.sqrt((x-cx)*(x-cx)+(y-cy)*(y-cy)) <= touchAreaRadius;
+        }
+        function isTouchInMovementArea(x, y) {
+            const cx = touchAreaMargin + touchAreaRadius, cy = window.innerHeight - touchAreaMargin - touchAreaRadius;
+            return Math.sqrt((x-cx)*(x-cx)+(y-cy)*(y-cy)) <= touchAreaRadius;
+        }
+        document.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            for (let i = 0; i < e.touches.length; i++) {
+                const t = e.touches[i];
+                const id = t.identifier;
+                if (isTouchInMovementArea(t.clientX, t.clientY)) {
+                    activeTouches.set(id, { type: 'movement', startX: t.clientX, startY: t.clientY, currentX: t.clientX, currentY: t.clientY });
+                    movementTouchArea.style.borderColor = 'rgba(255,255,255,0.6)';
+                    if (!galleryControls.isLocked) galleryControls.lock();
+                } else if (isTouchInCameraArea(t.clientX, t.clientY)) {
+                    activeTouches.set(id, { type: 'camera', startX: t.clientX, startY: t.clientY, currentX: t.clientX, currentY: t.clientY });
+                    cameraTouchArea.style.borderColor = 'rgba(255,255,255,0.6)';
+                    if (!galleryControls.isLocked) galleryControls.lock();
+                }
+            }
+        });
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            for (let i = 0; i < e.touches.length; i++) {
+                const t = e.touches[i];
+                const d = activeTouches.get(t.identifier);
+                if (!d) continue;
+                d.currentX = t.clientX;
+                d.currentY = t.clientY;
+                const deltaX = d.currentX - d.startX, deltaY = d.currentY - d.startY;
+                if (d.type === 'movement' && !camera.userData.onTrain) {
+                    const cx = touchAreaMargin + touchAreaRadius, cy = window.innerHeight - touchAreaMargin - touchAreaRadius;
+                    const relX = d.currentX - cx, relY = d.currentY - cy;
+                    const angle = -Math.atan2(relY, relX);
+                    const dist = Math.min(1, Math.sqrt(relX*relX+relY*relY)/touchAreaRadius);
+                    const camFwd = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+                    const camRight = new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
+                    const moveX = Math.cos(angle)*camRight.x + Math.sin(angle)*camFwd.x;
+                    const moveZ = Math.cos(angle)*camRight.z + Math.sin(angle)*camFwd.z;
+                    const len = Math.sqrt(moveX*moveX+moveZ*moveZ);
+                    camera.userData.movement = { x: moveX/len, z: moveZ/len, distance: dist };
+                } else if (d.type === 'camera') {
+                    galleryControls.euler.setFromQuaternion(galleryControls.camera.quaternion);
+                    galleryControls.euler.y -= deltaX * galleryControls.lookSpeed * 2;
+                    galleryControls.euler.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, galleryControls.euler.x - deltaY * galleryControls.lookSpeed * 2));
+                    galleryControls.camera.quaternion.setFromEuler(galleryControls.euler);
+                }
+                d.startX = d.currentX;
+                d.startY = d.currentY;
+            }
+        });
+        document.addEventListener('touchend', function(e) {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const id = e.changedTouches[i].identifier;
+                const d = activeTouches.get(id);
+                if (d) {
+                    if (d.type === 'movement') movementTouchArea.style.borderColor = 'rgba(255,255,255,0.3)';
+                    else if (d.type === 'camera') cameraTouchArea.style.borderColor = 'rgba(255,255,255,0.3)';
+                    activeTouches.delete(id);
+                }
+            }
+            if (!Array.from(activeTouches.values()).some(function(t){ return t.type === 'movement'; })) camera.userData.movement = null;
+            if (activeTouches.size === 0 && galleryControls.isLocked) galleryControls.unlock();
+        });
+
+        animate();
+    });
+    </script>
+</body>
+</html>
