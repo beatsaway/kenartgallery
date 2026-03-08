@@ -327,12 +327,15 @@
         createWalls();
         createLights();
         const artworkTextures = new Array(artworkImagePaths.length);
-        artworkImagePaths.forEach(function(path, idx) {
-            textureLoader.load(path, function(tex) {
+        function loadNext(idx) {
+            if (idx >= artworkImagePaths.length) return;
+            textureLoader.load(artworkImagePaths[idx], function(tex) {
                 artworkTextures[idx] = tex;
                 placeSingleArtwork(idx, tex);
-            }, undefined, function() {});
-        });
+                loadNext(idx + 1);
+            }, undefined, function() { loadNext(idx + 1); });
+        }
+        loadNext(0);
     }
 
     function createRailwaySystem() {
