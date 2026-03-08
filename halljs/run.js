@@ -15,12 +15,11 @@
             mainDiv.className = 'hall-popup-main';
             mainDiv.innerHTML = (popup.html || '').replace(/\n/g, '<br>');
             popupEl.appendChild(mainDiv);
-            document.body.appendChild(popupEl);
             var exitWrap = document.createElement('div');
             exitWrap.className = 'hall-popup-exit';
-            if (popupEl.classList.contains('visible') || popupEl.classList.contains('show-on-load')) exitWrap.classList.add('visible');
-            exitWrap.innerHTML = '<a href="../index.html" class="nodeco exit-room">Leave</a>';
-            document.body.appendChild(exitWrap);
+            exitWrap.innerHTML = '<a href="../index.html" class="nodeco exit-room">Return</a>';
+            popupEl.appendChild(exitWrap);
+            document.body.appendChild(popupEl);
 
             window.GALLERY_CONFIG = data.gallery || {};
             try {

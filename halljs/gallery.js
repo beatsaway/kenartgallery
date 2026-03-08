@@ -437,11 +437,9 @@
             if (e.target.classList.contains('nodeco')) return;
         });
         document.addEventListener('click', function(e) {
-            if (!hallPopup.contains(e.target) && !e.target.closest('.hall-popup-exit') && (hallPopup.classList.contains('visible') || hallPopup.classList.contains('show-on-load'))) {
+            if (!hallPopup.contains(e.target) && (hallPopup.classList.contains('visible') || hallPopup.classList.contains('show-on-load'))) {
                 hallPopup.classList.remove('visible');
                 hallPopup.classList.remove('show-on-load');
-                var exitEl = document.querySelector('.hall-popup-exit');
-                if (exitEl) exitEl.classList.remove('visible');
             }
         });
         const infoBtn = document.createElement('button');
@@ -452,14 +450,11 @@
         infoBtn.addEventListener('mouseenter', function() { infoBtn.style.background = 'rgba(255,255,255,0.35)'; });
         infoBtn.addEventListener('mouseleave', function() { infoBtn.style.background = 'rgba(255,255,255,0.2)'; });
         infoBtn.addEventListener('click', function() {
-                var exitEl = document.querySelector('.hall-popup-exit');
                 if (hallPopup.classList.contains('visible') || hallPopup.classList.contains('show-on-load')) {
                     hallPopup.classList.remove('visible');
                     hallPopup.classList.remove('show-on-load');
-                    if (exitEl) exitEl.classList.remove('visible');
                 } else {
                     hallPopup.classList.add('visible');
-                    if (exitEl) exitEl.classList.add('visible');
                 }
             });
         document.body.appendChild(infoBtn);
@@ -654,15 +649,12 @@
             } else if (e.code === 'KeyI') {
                 e.preventDefault();
                 var popup = document.getElementById('hall-popup');
-                var exitEl = document.querySelector('.hall-popup-exit');
                 if (popup) {
                     if (popup.classList.contains('visible') || popup.classList.contains('show-on-load')) {
                         popup.classList.remove('visible');
                         popup.classList.remove('show-on-load');
-                        if (exitEl) exitEl.classList.remove('visible');
                     } else {
                         popup.classList.add('visible');
-                        if (exitEl) exitEl.classList.add('visible');
                     }
                 }
             }
