@@ -1,0 +1,38 @@
+{
+  "popup": {
+    "showOnLoad": true,
+    "html": "Pen and Pencil Doodles by\n<a href=\"https://www.youtube.com/@tortorken\" class=\"nodeco\">imtortorken</a>\n© 2025<br>\n<a href=\"https://buymeacoffee.com/beatsaway\" class=\"nodeco\">☕ Support this artist</a>"
+  },
+  "gallery": {
+    "galleryWidth": 100,
+    "galleryLength": 500,
+    "galleryHeight": 40,
+    "artworkImagePaths": ["images/piece1.jpg", "images/piece2.jpg", "images/piece3.jpg", "images/piece4.jpg", "images/piece5.jpg", "images/piece6.jpg", "images/piece7.jpg", "images/piece8.jpg", "images/piece9.jpg", "images/piece10.jpg", "images/piece11.jpg", "images/piece12.jpg", "images/piece13.jpg", "images/piece14.jpg", "images/piece15.jpg", "images/piece16.jpg", "images/piece17.jpg", "images/piece18.jpg", "images/piece19.jpg"],
+    "piecesPerWallLeft": 9,
+    "piecesPerWallRight": 10,
+    "npcCount": 24,
+    "trainCartCount": 20,
+    "lighting": "spotlights"
+  },
+  "artworkDescriptions": [
+    { "title": "Patterns Emerge", "description": "Watch how repeated simple marks grow into something complex, just as billions of simple brain cells create our thoughts and consciousness." },
+    { "title": "Space Between", "description": "The red lines dance with the white paper, showing how emptiness shapes form. What's not drawn matters as much as what is—like pauses in a conversation." },
+    { "title": "Finding Meaning", "description": "Your brain naturally hunts for patterns everywhere. These unplanned marks reveal how you're always creating stories from random information—your mind is constantly making art." },
+    { "title": "Nature's Mathematics", "description": "These branching patterns follow the same hidden rules as tree limbs and river deltas. Your hand instinctively recreates nature's secret geometry." },
+    { "title": "Letting Go", "description": "This artwork wasn't planned—it emerged when control was surrendered. What unexpected beauty might appear in your life when you stop forcing outcomes?" },
+    { "title": "Creative Edge", "description": "Neither perfect order nor complete chaos makes interesting art—it's the tension between them. This piece lives at that fertile boundary where creativity thrives." },
+    { "title": "Beautiful Accidents", "description": "Here, intention meets chance. The unexpected marks aren't mistakes but collaborators, creating something neither could achieve alone." },
+    { "title": "Organized Chaos", "description": "As lines multiply, disorder increases, yet structure appears. This paradox mirrors everything from weather patterns to stock markets—complexity breeding new order." },
+    { "title": "More Than the Sum", "description": "Single marks are simple, but together they create exponential complexity. Like ants building cathedrals or neurons creating thought, basic units combine to form something magnificently beyond their individual capacity." },
+    { "title": "Effortless Action", "description": "These marks embody the Taoist principle of 'doing without doing'—not forcing results but allowing them to unfold naturally. When have your best outcomes come from letting go rather than pushing harder?" },
+    { "title": "External Thinking", "description": "These marks function as thinking-on-paper, extending your brain onto the page. Your environment becomes part of your creative processing." },
+    { "title": "Response Chains", "description": "Each mark responds to what came before, creating a visual conversation. Life similarly unfolds through chains of response rather than isolated actions." },
+    { "title": "Subtle Power", "description": "The red lines whisper rather than shout, showing how powerful subtlety can be. What quiet forces are shaping your perceptions right now?" },
+    { "title": "Natural Order", "description": "Without a master plan, these marks self-organize into coherent forms—just like flocks of birds, market economies, and internet communities find structure without central control." },
+    { "title": "Decision Trees", "description": "Each mark branches into new possibilities, just as small choices open unexpected pathways in life. This artwork maps the geography of potential." },
+    { "title": "Collective Intelligence", "description": "Beauty emerges here not from one brilliant stroke but from many simple decisions across time. What problems in your life might benefit from this distributed approach?" },
+    { "title": "Between Worlds", "description": "These forms exist between planning and chance—in that fertile in-between space where preparation meets opportunity and magic happens." },
+    { "title": "Mind Liberation", "description": "Repeating the same mark frees your conscious mind from the physical action. This desensitization unlocks flow state—showing how repetition isn't boring but can be the doorway to creative freedom." },
+    { "title": "Beyond Self", "description": "This artwork isn't about expressing personality but capturing universal process. What becomes possible when we create from beyond our ego boundaries?" }
+  ]
+}

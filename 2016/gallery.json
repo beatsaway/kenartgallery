@@ -1,0 +1,29 @@
+{
+  "popup": {
+    "showOnLoad": true,
+    "html": "Pen and Pencil Doodles by\n<a href=\"https://www.youtube.com/@tortorken\" class=\"nodeco\">imtortorken</a>\n© 2016<br>\n<a href=\"https://buymeacoffee.com/beatsaway\" class=\"nodeco\">☕ Support this artist</a>"
+  },
+  "gallery": {
+    "galleryWidth": 70,
+    "galleryLength": 250,
+    "galleryHeight": 40,
+    "artworkImagePaths": ["images/pasted_images46.jpg", "images/pasted_images47.jpg", "images/pasted_images48.jpg", "images/pasted_images49.jpg", "images/pasted_images50.jpg", "images/pasted_images51.jpg", "images/pasted_images52.jpg", "images/pasted_images53.jpg", "images/pasted_images54.jpg", "images/pasted_images55.jpg"],
+    "piecesPerWallLeft": 5,
+    "piecesPerWallRight": 5,
+    "npcCount": 6,
+    "trainCartCount": 4,
+    "lighting": "simple"
+  },
+  "artworkDescriptions": [
+    { "title": "Piece 1", "description": "Add your description for this artwork." },
+    { "title": "Piece 2", "description": "Add your description for this artwork." },
+    { "title": "Piece 3", "description": "Add your description for this artwork." },
+    { "title": "Piece 4", "description": "Add your description for this artwork." },
+    { "title": "Piece 5", "description": "Add your description for this artwork." },
+    { "title": "Piece 6", "description": "Add your description for this artwork." },
+    { "title": "Piece 7", "description": "Add your description for this artwork." },
+    { "title": "Piece 8", "description": "Add your description for this artwork." },
+    { "title": "Piece 9", "description": "Add your description for this artwork." },
+    { "title": "Piece 10", "description": "Add your description for this artwork." }
+  ]
+}
