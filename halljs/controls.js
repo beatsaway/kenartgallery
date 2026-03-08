@@ -93,6 +93,8 @@ class GalleryControls {
             if (this.isLocked) {
                 this.euler.setFromQuaternion(this.camera.quaternion);
                 this.euler.y -= e.movementX * this.lookSpeed;
+                // Wrap horizontal angle so you can keep turning left/right indefinitely (no limit)
+                this.euler.y = Math.atan2(Math.sin(this.euler.y), Math.cos(this.euler.y));
                 this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x - e.movementY * this.lookSpeed));
                 this.camera.quaternion.setFromEuler(this.euler);
             }

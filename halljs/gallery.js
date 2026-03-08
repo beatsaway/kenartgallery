@@ -605,6 +605,7 @@
             } else if (d.type === 'camera') {
                 controls.euler.setFromQuaternion(controls.camera.quaternion);
                 controls.euler.y -= deltaX * controls.lookSpeed * 2;
+                controls.euler.y = Math.atan2(Math.sin(controls.euler.y), Math.cos(controls.euler.y));
                 controls.euler.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, controls.euler.x - deltaY * controls.lookSpeed * 2));
                 controls.camera.quaternion.setFromEuler(controls.euler);
             }
