@@ -641,6 +641,10 @@
         function goToSelected() {
             const n = parseInt(select.value, 10);
             if (!isNaN(n) && window.moveCameraToArtwork) window.moveCameraToArtwork(n);
+            // Re-request pointer lock after nav; clicking button/select exits lock and limits mouse look
+            setTimeout(function() {
+                if (controls && !controls.isLocked) controls.lock();
+            }, 0);
         }
         select.addEventListener('change', goToSelected);
         header.querySelector('#hall-guide-prev').addEventListener('click', function() {
