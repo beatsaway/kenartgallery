@@ -437,6 +437,7 @@
             if (e.target.classList.contains('nodeco')) return;
         });
         document.addEventListener('click', function(e) {
+            if (e.target.closest('.hall-info-btn')) return;
             if (!hallPopup.contains(e.target) && (hallPopup.classList.contains('visible') || hallPopup.classList.contains('show-on-load'))) {
                 hallPopup.classList.remove('visible');
                 hallPopup.classList.remove('show-on-load');
@@ -444,6 +445,7 @@
         });
         const infoBtn = document.createElement('button');
         infoBtn.type = 'button';
+        infoBtn.className = 'hall-info-btn';
         infoBtn.setAttribute('aria-label', 'Info');
         infoBtn.textContent = 'i';
         infoBtn.style.cssText = 'position:fixed;top:10px;right:16px;z-index:1003;width:28px;height:28px;padding:0;border:none;border-radius:50%;background:rgba(255,255,255,0.2);color:#fff;font-size:16px;font-style:italic;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;text-shadow:0 1px 2px rgba(0,0,0,0.5)';
