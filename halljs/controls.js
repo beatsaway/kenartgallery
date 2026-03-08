@@ -37,12 +37,15 @@ class GalleryControls {
         if (this.eventListeners[event]) this.eventListeners[event].forEach(cb => cb());
     }
     lock() {
-        document.body.requestPointerLock();
+        var isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (!isTouch && typeof document.body.requestPointerLock === 'function') {
+            document.body.requestPointerLock();
+        }
         this._isLocked = true;
         this.dispatchEvent({ type: 'lock' });
     }
     unlock() {
-        document.exitPointerLock();
+        if (document.pointerLockElement != null) document.exitPointerLock();
         this._isLocked = false;
         this.dispatchEvent({ type: 'unlock' });
     }
