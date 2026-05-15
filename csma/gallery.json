@@ -1,9 +1,11 @@
 {
   "popup": {
     "showOnLoad": true,
-    "html": "<span class=\"popup-title\">Paint and Digital Art</span>\nby imtortorken\n© 2020"
+    "showReturnLink": false,
+    "html": "<span class=\"popup-title\">Paint and Digital Art</span>\nby imtortorken"
   },
   "gallery": {
+    "showInfoButton": false,
     "galleryWidth": 70,
     "galleryLength": 1200,
     "galleryHeight": 40,

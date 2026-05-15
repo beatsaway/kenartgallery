@@ -4,6 +4,7 @@
  * Reads window.GALLERY_CONFIG: galleryWidth, galleryLength, galleryHeight,
  * artworkImagePaths (array) OR artworkImagePattern + artworkCount (e.g. "images/img_{i}.webp", 10),
  * piecesPerWallLeft, piecesPerWallRight, npcCount, trainCartCount, lighting ('simple'|'spotlights').
+ * Optional showInfoButton: set false to hide the hall popup “i” toggle button.
  */
 (function() {
     const config = window.GALLERY_CONFIG;
@@ -470,15 +471,16 @@
                 hallPopup.classList.remove('show-on-load');
             }
         });
-        const infoBtn = document.createElement('button');
-        infoBtn.type = 'button';
-        infoBtn.className = 'hall-info-btn';
-        infoBtn.setAttribute('aria-label', 'Info');
-        infoBtn.textContent = 'i';
-        infoBtn.style.cssText = 'position:fixed;top:10px;right:16px;z-index:1003;width:28px;height:28px;padding:0;border:none;border-radius:50%;background:rgba(255,255,255,0.2);color:#fff;font-size:16px;font-style:italic;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;text-shadow:0 1px 2px rgba(0,0,0,0.5)';
-        infoBtn.addEventListener('mouseenter', function() { infoBtn.style.background = 'rgba(255,255,255,0.35)'; });
-        infoBtn.addEventListener('mouseleave', function() { infoBtn.style.background = 'rgba(255,255,255,0.2)'; });
-        infoBtn.addEventListener('click', function() {
+        if (config.showInfoButton !== false) {
+            const infoBtn = document.createElement('button');
+            infoBtn.type = 'button';
+            infoBtn.className = 'hall-info-btn';
+            infoBtn.setAttribute('aria-label', 'Info');
+            infoBtn.textContent = 'i';
+            infoBtn.style.cssText = 'position:fixed;top:10px;right:16px;z-index:1003;width:28px;height:28px;padding:0;border:none;border-radius:50%;background:rgba(255,255,255,0.2);color:#fff;font-size:16px;font-style:italic;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;text-shadow:0 1px 2px rgba(0,0,0,0.5)';
+            infoBtn.addEventListener('mouseenter', function() { infoBtn.style.background = 'rgba(255,255,255,0.35)'; });
+            infoBtn.addEventListener('mouseleave', function() { infoBtn.style.background = 'rgba(255,255,255,0.2)'; });
+            infoBtn.addEventListener('click', function() {
                 if (hallPopup.classList.contains('visible') || hallPopup.classList.contains('show-on-load')) {
                     hallPopup.classList.remove('visible');
                     hallPopup.classList.remove('show-on-load');
@@ -486,7 +488,8 @@
                     hallPopup.classList.add('visible');
                 }
             });
-        document.body.appendChild(infoBtn);
+            document.body.appendChild(infoBtn);
+        }
     }
 
     window.addEventListener('resize', function() {

@@ -1,6 +1,7 @@
 /**
  * Fetches the year's gallery.json, applies config + popup + artwork descriptions, then loads controls and gallery.
  * Set window.GALLERY_JSON_URL (e.g. 'gallery.json') before loading this script.
+ * Optional popup.showReturnLink: set false to omit the Return link row.
  */
 (function() {
     var url = window.GALLERY_JSON_URL || 'gallery.json';
@@ -15,10 +16,12 @@
             mainDiv.className = 'hall-popup-main';
             mainDiv.innerHTML = (popup.html || '').replace(/\n/g, '<br>');
             popupEl.appendChild(mainDiv);
-            var exitWrap = document.createElement('div');
-            exitWrap.className = 'hall-popup-exit';
-            exitWrap.innerHTML = '<a href="../index.html" class="nodeco exit-room">Return</a>';
-            popupEl.appendChild(exitWrap);
+            if (popup.showReturnLink !== false) {
+                var exitWrap = document.createElement('div');
+                exitWrap.className = 'hall-popup-exit';
+                exitWrap.innerHTML = '<a href="../index.html" class="nodeco exit-room">Return</a>';
+                popupEl.appendChild(exitWrap);
+            }
             document.body.appendChild(popupEl);
 
             window.GALLERY_CONFIG = data.gallery || {};
