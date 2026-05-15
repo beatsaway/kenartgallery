@@ -5,6 +5,7 @@
  * artworkImagePaths (array) OR artworkImagePattern + artworkCount (e.g. "images/img_{i}.webp", 10),
  * piecesPerWallLeft, piecesPerWallRight, npcCount, trainCartCount, lighting ('simple'|'spotlights').
  * Optional showInfoButton: set false to hide the hall popup “i” toggle button.
+ * Optional showArtworkLabels: set false to omit title/description plaques under each piece.
  */
 (function() {
     const config = window.GALLERY_CONFIG;
@@ -185,6 +186,9 @@
         });
         const artwork = new THREE.Mesh(artworkGeometry, artworkMaterial);
         artworkGroup.add(artwork);
+        if (config.showArtworkLabels === false) {
+            return artworkGroup;
+        }
         const signWidth = width*0.4;
         const signHeight = height*0.1;
         const canvas = document.createElement('canvas');
