@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Art Gallery 2020 · CSMA</title>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; background: #000; }
+        #scene-container { position: relative; width: 100vw; height: 100vh; background: linear-gradient(to bottom, #9ca3af, #4b5563); }
+        #controls-info { position: fixed; bottom: 20px; left: 20px; color: white; font-size: 14px; text-shadow: 2px 2px #000; z-index: 1000; line-height: 1.4; pointer-events: none; }
+        #controls-info p { margin: 4px 0; }
+        #artwork-info { display: none; }
+        .train-prompt { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px; border-radius: 6px; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+        .train-prompt.visible { opacity: 1; }
+        #hall-popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001; flex-direction: column; align-items: center; gap: 0.5rem; }
+        #hall-popup.visible { display: flex; }
+        #hall-popup.show-on-load { display: flex; }
+        #hall-popup .hall-popup-main { background: rgba(0, 0, 0, 0.66); color: rgba(255,255,255,0.95); padding: 1.4rem 1.75rem; border-radius: 10px; text-align: center; font-size: 1.0625rem; line-height: 1.45; font-family: system-ui, -apple-system, "Helvetica Neue", sans-serif; text-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 0 1px rgba(0,0,0,0.6); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); min-width: 260px; }
+        #hall-popup .hall-popup-exit { margin-top: 0.5rem; opacity: 0.66; background: rgba(0, 0, 0, 0.9); color: #fff; padding: 0.65rem 1.25rem; border-radius: 10px; text-align: center; font-size: 0.9375rem; font-family: system-ui, -apple-system, "Helvetica Neue", sans-serif; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); }
+        #hall-popup .hall-popup-exit .nodeco { color: #6bb3ff; text-decoration: none; }
+        #hall-popup .hall-popup-exit .nodeco:hover { color: #9ac8ff; text-decoration: none; }
+        #hall-popup .nodeco { color: #6bb3ff; text-decoration: none; }
+        #hall-popup .nodeco:hover { color: #9ac8ff; text-decoration: none; }
+        #hall-popup .popup-title { display: block; font-size: 1.5rem; font-weight: 600; letter-spacing: 0.02em; margin-bottom: 0.05em; line-height: 1.25; color: #fff; }
+        #train-button { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 24px; border: none; background: none; color: white; cursor: pointer; display: none; z-index: 1000; }
+        @media (max-width: 768px) { #controls-info { display: none; } }
+    </style>
+</head>
+<body>
+    <div id="scene-container"></div>
+    <button id="train-button" title="Board/Exit Train">🚂🅴</button>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.183.2/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.183.2/examples/jsm/"
+        }
+    }
+    </script>
+    <script>
+        window.GALLERY_JSON_URL = 'gallery.json';
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        const THREE_global = Object.assign({}, THREE, { OrbitControls });
+        window.THREE = THREE_global;
+        var base = new URL('.', import.meta.url).href;
+        var s = document.createElement('script');
+        s.src = new URL('../halljs/run.js', base).href;
+        document.body.appendChild(s);
+    </script>
+</body>
+</html>
