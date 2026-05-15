@@ -51,5 +51,39 @@
         s.src = new URL('../halljs/run.js', base).href;
         document.body.appendChild(s);
     </script>
+    <script>
+        (function () {
+            var slideshowIntervalId = null;
+            /** Space toggles this; while true, advances one piece every 4s (loops). */
+            window.loopSlideshowMode = false;
+
+            function clickNextPiece() {
+                var btn = document.getElementById('hall-guide-next');
+                if (btn) btn.click();
+            }
+
+            function setLoopSlideshowMode(on) {
+                window.loopSlideshowMode = !!on;
+                if (slideshowIntervalId) {
+                    clearInterval(slideshowIntervalId);
+                    slideshowIntervalId = null;
+                }
+                if (window.loopSlideshowMode) {
+                    slideshowIntervalId = setInterval(clickNextPiece, 4000);
+                }
+            }
+
+            document.addEventListener('keydown', function (e) {
+                if (e.code !== 'Space') return;
+                var el = e.target;
+                var tag = el && el.tagName;
+                if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
+                if (!document.getElementById('hall-guide-next')) return;
+                e.preventDefault();
+                if (e.repeat) return;
+                setLoopSlideshowMode(!window.loopSlideshowMode);
+            });
+        })();
+    </script>
 </body>
 </html>
